@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+backend/venv/
+.env
+backend/.env
+
+# Databases
+*.db
+*.sqlite3
+
+# Node / Frontend
+node_modules/
+dist/
+gazarzar_deploy.zip
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GazarZar - Admin Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --primary: #2d5a27;
+            --bg: #f4f7f6;
+            --text-main: #1a1e23;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg); color: var(--text-main); }
+        
+        .login-container {
+            display: flex; height: 100vh; align-items: center; justify-content: center;
+        }
+        .login-card {
+            background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            width: 400px; text-align: center;
+        }
+        .login-card input { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
+        .login-card button { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
+        
+        #adminView { display: none; padding: 40px; max-width: 1200px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 30px; }
+        .stat-card { background: white; border-radius: 14px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        
+        .tables-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
+        .table-card { background: white; border-radius: 16px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        @media (min-width: 1024px) {
+            .tables-grid { grid-template-columns: 1fr 1fr; }
+            .full-width { grid-column: span 2; }
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+        th { background: #f4f7f6; font-weight: 600; color: #666; }
+        
+        .btn-action { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 11px; }
+        .btn-approve { background: #e8f5e9; color: #2d5a27; }
+        .btn-delete { background: #ffebee; color: #c62828; }
+    </style>
+</head>
+<body>
+
+    <!-- LOGIN SCREEN -->
+    <div class="login-container" id="loginView">
+        <div class="login-card">
+            <h2 style="margin-bottom: 10px;">Админ Нэвтрэх</h2>
+            <p style="color: #666; margin-bottom: 30px; font-size: 14px;">Зөвхөн админ эрхтэй дугаараар нэвтэрнэ үү.</p>
+            <div id="phoneStep">
+                <input type="text" id="adminPhone" placeholder="Утасны дугаар (Ж: 99111111)">
+                <button onclick="requestOTP()">КОД АВАХ</button>
+            </div>
+            <div id="codeStep" style="display:none;">
+                <input type="text" id="adminCode" placeholder="6 оронтой код" letter-spacing="5px">
+                <button onclick="verifyOTP()">БАТАЛГААЖУУЛАХ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADMIN DASHBOARD -->
+    <div id="adminView">
+        <div class="header">
+            <h2 style="font-size:28px; font-weight:800;">⚙ Админ Хяналтын Самбар</h2>
+            <div>
+                <a href="/" style="text-decoration:none; color:var(--primary); font-weight:700; font-size:13px; margin-right:20px;">🏠 САЙТ ҮЗЭХ</a>
+                <span style="background:#e8f5e9; color:#2d5a27; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:700; margin-right: 15px;">● Ажиллаж байна</span>
+                <button onclick="logout()" style="background:none; border:none; color:red; font-weight:600; cursor:pointer;">Гарах</button>
+            </div>
+        </div>
+        
+        <div class="stats-grid" id="adminStats"></div>
+        
+        <div class="tables-grid">
+            <div class="table-card full-width" id="pendingSection" style="display:none; border-left: 5px solid #ffc107;">
+                <h3 style="margin-bottom:16px; font-size:16px; font-weight:800; color:#856404;">⏳ Батлах хүлээгдэж буй зарууд</h3>
+                <div id="adminPendingTable"></div>
+            </div>
+            <div class="table-card">
+                <h3 style="margin-bottom:16px; font-size:16px; font-weight:800;">Бүх зарууд</h3>
+                <div id="adminListingTable"></div>
+            </div>
+            <div class="table-card">
+                <h3 style="margin-bottom:16px; font-size:16px; font-weight:800;">Агентуудын жагсаалт</h3>
+                <div id="adminAgentTable"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        
+        async function checkAuth() {
+            const gz_token = localStorage.getItem('gz_token');
+            if (!gz_token) {
+                document.getElementById('loginView').style.display = 'flex';
+                document.getElementById('adminView').style.display = 'none';
+                return;
+            }
+            // Fetch data, if 403 Forbidden, gz_token is invalid or not admin
+            try {
+                const res = await fetch(`${API_BASE}/admin`, {
+                    headers: { 'Authorization': `Bearer ${gz_token}` }
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('loginView').style.display = 'none';
+                    document.getElementById('adminView').style.display = 'block';
+                    renderAdmin(data);
+                } else {
+                    alert('Админ эрхтэй нэвтэрнэ үү!');
+                    logout();
+                }
+            } catch (e) {
+                console.error("Connection error", e);
+            }
+        }
+
+        async function requestOTP() {
+            const phone = document.getElementById('adminPhone').value;
+            if (!phone) return alert("Дугаараа оруулна уу");
+            const res = await fetch(`${API_BASE}/auth/send-otp`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                if (data.demo_code) alert(`[DEMO MODE] Код: ${data.demo_code}`);
+                document.getElementById('phoneStep').style.display = 'none';
+                document.getElementById('codeStep').style.display = 'block';
+            } else {
+                alert(data.detail || "Алдаа гарлаа");
+            }
+        }
+
+        async function verifyOTP() {
+            const phone = document.getElementById('adminPhone').value;
+            const code = document.getElementById('adminCode').value;
+            const res = await fetch(`${API_BASE}/auth/verify-otp`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone, code })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                localStorage.setItem('gz_token', data.access_token);
+                checkAuth(); // Reload
+            } else {
+                alert("Код буруу байна.");
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('gz_token');
+            location.reload();
+        }
+
+        function renderAdmin(data) {
+            const statsEl = document.getElementById('adminStats');
+            const cards = [
+                {label:'Нийт зар', val: data.total_listings, icon:'🏠', color:'#2d5a27'},
+                {label:'Идэвхтэй', val: data.active_listings, icon:'✅', color:'#28a745'},
+                {label:'Boosted', val: data.boosted_listings, icon:'⭐', color:'#f59e0b'},
+                {label:'Агентууд', val: data.total_agents, icon:'👔', color:'#007bff'},
+                {label:'Хэрэглэгч', val: data.total_users, icon:'👤', color:'#6f42c1'},
+                {label:'Орлого ₮', val: data.revenue_this_month ? data.revenue_this_month.toLocaleString() : '-', icon:'💰', color:'#e83e8c'},
+            ];
+            statsEl.innerHTML = cards.map(c => `
+                <div class="stat-card" style="border-left:4px solid ${c.color};">
+                    <div style="font-size:28px;margin-bottom:6px;">${c.icon}</div>
+                    <div style="font-size:24px;font-weight:800;color:${c.color};">${c.val}</div>
+                    <div style="font-size:13px;color:#666;font-weight:600;">${c.label}</div>
+                </div>`).join('');
+
+            // Pending Listings
+            const pending = data.listings.filter(l => l.status !== 'active');
+            const pendingEl = document.getElementById('adminPendingTable');
+            const pendingSection = document.getElementById('pendingSection');
+            
+            if (pending.length > 0) {
+                pendingSection.style.display = 'block';
+                pendingEl.innerHTML = `<table>
+                    <thead><tr><th>Гарчиг</th><th>Үнэ</th><th>Үйлдэл</th></tr></thead>
+                    <tbody>${pending.map(l => `
+                        <tr>
+                            <td style="font-weight:600;">${l.title}</td>
+                            <td style="color:var(--primary); font-weight:700;">${l.price ? l.price.toLocaleString()+'₮' : '-'}</td>
+                            <td>
+                                <button class="btn-action btn-approve" onclick="approveListing(${l.id})">БАТЛАХ</button>
+                                <button class="btn-action btn-delete" onclick="deleteListing(${l.id})">УСТГАХ</button>
+                            </td>
+                        </tr>
+                    `).join('')}</tbody>
+                </table>`;
+            } else {
+                pendingSection.style.display = 'none';
+            }
+
+            // All Listings Table
+            const listingsEl = document.getElementById('adminListingTable');
+            listingsEl.innerHTML = `<table>
+                <thead><tr><th>Гарчиг</th><th>Төлөв</th></tr></thead>
+                <tbody>${data.listings.map(l => `
+                    <tr>
+                        <td style="font-weight:600;">${l.title.substring(0, 30)}...</td>
+                        <td><span style="background:${l.status==='active'?'#e8f5e9':'#fff3cd'}; padding:4px 8px; border-radius:10px; font-size:11px;">${l.status==='active'?'Идэвхтэй':'Хүлээгдэж буй'}</span></td>
+                    </tr>
+                `).join('')}</tbody>
+            </table>`;
+
+            // Agents Table
+            const agentsEl = document.getElementById('adminAgentTable');
+            agentsEl.innerHTML = `<table>
+                <thead><tr><th>Нэр</th><th>Зар</th><th>Үнэлгээ</th></tr></thead>
+                <tbody>${data.agents.map(a => `
+                    <tr>
+                        <td style="font-weight:700;">${a.name}</td>
+                        <td style="color:var(--primary); font-weight:700;">${a.listings_count}</td>
+                        <td>⭐ ${a.rating}</td>
+                    </tr>
+                `).join('')}</tbody>
+            </table>`;
+        }
+
+        async function approveListing(id) {
+            if (!confirm("Энэ зарыг батлах уу?")) return;
+            const gz_token = localStorage.getItem('gz_token');
+            const res = await fetch(`${API_BASE}/admin/listings/${id}/approve`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${gz_token}` }
+            });
+            if (res.ok) {
+                alert("Амжилттай баталлаа");
+                location.reload();
+            } else {
+                alert("Алдаа гарлаа");
+            }
+        }
+        
+        async function deleteListing(id) {
+            if (!confirm("Энэ зарыг бүр мөсөн устгах уу?")) return;
+            const gz_token = localStorage.getItem('gz_token');
+            const res = await fetch(`${API_BASE}/admin/listings/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${gz_token}` }
+            });
+            if (res.ok) {
+                alert("Амжилттай устгалаа");
+                location.reload();
+            } else {
+                alert("Алдаа гарлаа");
+            }
+        }
+
+        // Init
+        checkAuth();
+        setInterval(checkAuth, 60000); // Refresh every 60s
+    </script>
+</body>
+</html>
