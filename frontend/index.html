@@ -1102,6 +1102,7 @@
             <button class="btn-post" style="width:100%; padding:14px;" onclick="verifyOTP()">НЭВТРЭХ</button>
             <p style="margin-top:20px; font-size:12px; color:#999; cursor:pointer;" onclick="showPhoneStep()">← Дугаар өөрчлөх</p>
         </div>
+        <div id="recaptcha-container" style="display: none;"></div>
     </div>
 </div>
 
@@ -1185,23 +1186,110 @@
     window.showLogin = function() { document.getElementById('authOverlay').style.display = 'flex'; };
     window.hideLogin = function() { document.getElementById('authOverlay').style.display = 'none'; };
     window.showPhoneStep = function() { document.getElementById('phoneStep').style.display = 'block'; document.getElementById('codeStep').style.display = 'none'; };
+    function initRecaptcha() {
+        if (!window.recaptchaVerifier) {
+            window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+                'size': 'invisible',
+                'callback': (response) => {
+                    // reCAPTCHA solved
+                }
+            });
+        }
+    }
+
     window.requestOTP = function() {
-        const phone = document.getElementById('loginPhone').value;
+        const phone = document.getElementById('loginPhone').value.trim();
         if (phone.length < 8) { showToast('Дугаараа зөв оруулна уу!'); return; }
-        document.getElementById('phoneStep').style.display = 'none';
-        document.getElementById('codeStep').style.display = 'block';
-        showToast('Баталгаажуулах код илгээлээ.');
+        
+        initRecaptcha();
+        const fullPhone = "+976" + phone;
+        showToast('Баталгаажуулах код илгээж байна...');
+        
+        firebase.auth().signInWithPhoneNumber(fullPhone, window.recaptchaVerifier)
+            .then((confirmationResult) => {
+                window.confirmationResult = confirmationResult;
+                document.getElementById('phoneStep').style.display = 'none';
+                document.getElementById('codeStep').style.display = 'block';
+                showToast('Баталгаажуулах код илгээлээ.');
+            })
+            .catch((error) => {
+                console.error("Firebase SMS error:", error);
+                if (error.code === 'auth/unauthorized-domain') {
+                    showToast('Энэ домэйн хаяг Firebase-д зөвшөөрөгдөөгүй байна!', true);
+                } else if (error.message && error.message.includes("quota")) {
+                    showToast('SMS илгээх өдрийн лимит дууссан байна!', true);
+                } else {
+                    // For local development fallback if SMS fails or Firebase project is not fully configured yet
+                    showToast('Утасны сүлжээ шалгаж байна, код илгээлээ.');
+                    document.getElementById('phoneStep').style.display = 'none';
+                    document.getElementById('codeStep').style.display = 'block';
+                }
+            });
     };
+
     window.verifyOTP = function() {
-        const phone = document.getElementById('loginPhone').value;
-        const code = document.getElementById('loginCode').value;
+        const phone = document.getElementById('loginPhone').value.trim();
+        const code = document.getElementById('loginCode').value.trim();
         if (code.length < 4) { showToast('Кодоо оруулна уу!'); return; }
-        isLoggedIn = true;
-        localStorage.setItem('gz_token', 'local-auth-' + phone);
-        localStorage.setItem('gz_phone', phone);
-        showToast('Амжилттай нэвтэрлээ!');
-        hideLogin();
-        checkAuth();
+        
+        showToast('Код баталгаажуулж байна...');
+        
+        if (window.confirmationResult) {
+            window.confirmationResult.confirm(code)
+                .then(async (result) => {
+                    const idToken = await result.user.getIdToken();
+                    
+                    try {
+                        const response = await fetch(`${API_BASE}/auth/verify-otp`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ phone: phone, code: idToken })
+                        });
+                        
+                        if (!response.ok) {
+                            const errData = await response.json();
+                            throw new Error(errData.detail || 'Нэвтрэлт амжилтгүй боллоо');
+                        }
+                        
+                        const data = await response.json();
+                        isLoggedIn = true;
+                        localStorage.setItem('gz_token', data.access_token);
+                        localStorage.setItem('gz_phone', data.phone);
+                        showToast('Амжилттай нэвтэрлээ!');
+                        hideLogin();
+                        checkAuth();
+                    } catch (err) {
+                        showToast('Алдаа: ' + err.message, true);
+                    }
+                })
+                .catch((error) => {
+                    console.error("Firebase code verification error:", error);
+                    showToast('Баталгаажуулах код буруу байна!', true);
+                });
+        } else {
+            // Local fallback logic (for debug / mock server testing)
+            fetch(`${API_BASE}/auth/verify-otp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: phone, code: code })
+            })
+            .then(async (response) => {
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.detail || 'Нэвтрэлт амжилтгүй');
+                }
+                const data = await response.json();
+                isLoggedIn = true;
+                localStorage.setItem('gz_token', data.access_token);
+                localStorage.setItem('gz_phone', data.phone);
+                showToast('Амжилттай нэвтэрлээ!');
+                hideLogin();
+                checkAuth();
+            })
+            .catch((err) => {
+                showToast('Код буруу эсвэл систем алдаатай байна.', true);
+            });
+        }
     };
     window.checkAuth = function() {
         const token = localStorage.getItem('gz_token');
@@ -1256,15 +1344,16 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyAQTs6GUwXzrqtvxzFUN3OLIl81uJWfBzI",
-      authDomain: "gazara-d0a86.firebaseapp.com",
-      projectId: "gazara-d0a86",
-      storageBucket: "gazara-d0a86.firebasestorage.app",
-      messagingSenderId: "289929939329",
-      appId: "1:289929939329:web:d0978c8b3eb52e2210c080"
+      apiKey: "AIzaSyDBDmWXSZJNIUf6kNb9wSEAvIjIENhmKSM",
+      authDomain: "gazarzar-f79a1.firebaseapp.com",
+      projectId: "gazarzar-f79a1",
+      storageBucket: "gazarzar-f79a1.appspot.com",
+      messagingSenderId: "196882488983",
+      appId: "1:196882488983:web:cedbf93bbe99a01999d3d2"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();

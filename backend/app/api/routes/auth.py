@@ -84,19 +84,38 @@ async def send_otp(body: SendOTPRequest, db: Session = Depends(get_db)):
 @router.post("/verify-otp", response_model=TokenResponse)
 async def verify_otp(body: VerifyOTPRequest, db: Session = Depends(get_db)):
     phone = normalize_phone(body.phone)
-    now = datetime.now(timezone.utc)
 
-    otp = db.query(OTPCode).filter(
-        OTPCode.phone == phone,
-        OTPCode.code == body.code,
-        OTPCode.is_used == False,
-        OTPCode.expires_at > now
-    ).first()
+    # Check if the code looks like a Firebase ID Token (JWT is usually long, e.g. > 100 chars)
+    if len(body.code) > 6:
+        from app.core.firebase import verify_firebase_token
+        try:
+            firebase_phone_raw = verify_firebase_token(body.code)
+            firebase_phone = normalize_phone(firebase_phone_raw)
+            # Firebase phone format is "+97699001122". We get last 8 digits for Mongolian numbers.
+            if firebase_phone.startswith("976") and len(firebase_phone) > 8:
+                firebase_phone = firebase_phone[-8:]
+            elif len(firebase_phone) > 8:
+                # Fallback if phone code is different but contains Mongolian number
+                firebase_phone = firebase_phone[-8:]
 
-    if not otp:
-        raise HTTPException(status_code=400, detail="Код буруу эсвэл хугацаа дууссан")
+            if firebase_phone != phone:
+                raise HTTPException(status_code=400, detail="Утасны дугаар таарахгүй байна")
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+    else:
+        # Standard local OTP verification (Backward compatibility for debug/mock)
+        now = datetime.now(timezone.utc)
+        otp = db.query(OTPCode).filter(
+            OTPCode.phone == phone,
+            OTPCode.code == body.code,
+            OTPCode.is_used == False,
+            OTPCode.expires_at > now
+        ).first()
 
-    otp.is_used = True
+        if not otp:
+            raise HTTPException(status_code=400, detail="Код буруу эсвэл хугацаа дууссан")
+
+        otp.is_used = True
 
     # Get or create user
     user = db.query(User).filter(User.phone == phone).first()
@@ -109,6 +128,7 @@ async def verify_otp(body: VerifyOTPRequest, db: Session = Depends(get_db)):
 
     token = create_access_token({"sub": user.phone, "user_id": user.id})
     return TokenResponse(access_token=token, user_id=user.id, phone=user.phone, name=user.name)
+
 
 
 @router.get("/me")

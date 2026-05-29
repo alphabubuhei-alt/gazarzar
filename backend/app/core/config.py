@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     SMS_API_KEY: str = ""
     SMS_API_SECRET: str = ""
     SMS_SENDER: str = "GazarZar"
+    FIREBASE_PROJECT_ID: str = "gazarzar-f79a1"
+
 
     class Config:
         env_file = ".env"
