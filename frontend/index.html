@@ -1884,7 +1884,22 @@
             const newListingId = listingData.id;
 
             // 2. Upload photos if selected
+            let imgUrl = 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1200&q=80';
             const mediaInput = document.getElementById('mediaInput');
+            if (mediaInput && mediaInput.files && mediaInput.files[0]) {
+                imgUrl = await new Promise(resolve => {
+                    const reader = new FileReader();
+                    reader.onload = e => {
+                        const img = new Image();
+                        img.onload = () => {
+                            try {
+                                const canvas = document.createElement('canvas');
+                                let width = img.width, height = img.height;
+                                if (width > 800) { height *= 800 / width; width = 800; }
+                                canvas.width = width; canvas.height = height;
+                                canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                                resolve(canvas.toDataURL('image/jpeg', 0.7));
+                            } catch (err) {
                                 resolve('https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1200&q=80');
                             }
                         };
