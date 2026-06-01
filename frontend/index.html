@@ -1201,30 +1201,35 @@
         const phone = document.getElementById('loginPhone').value.trim();
         if (phone.length < 8) { showToast('Дугаараа зөв оруулна уу!'); return; }
         
-        initRecaptcha();
-        const fullPhone = "+976" + phone;
         showToast('Баталгаажуулах код илгээж байна...');
         
-        firebase.auth().signInWithPhoneNumber(fullPhone, window.recaptchaVerifier)
-            .then((confirmationResult) => {
-                window.confirmationResult = confirmationResult;
-                document.getElementById('phoneStep').style.display = 'none';
-                document.getElementById('codeStep').style.display = 'block';
-                showToast('Баталгаажуулах код илгээлээ.');
-            })
-            .catch((error) => {
-                console.error("Firebase SMS error:", error);
-                if (error.code === 'auth/unauthorized-domain') {
-                    showToast('Энэ домэйн хаяг Firebase-д зөвшөөрөгдөөгүй байна!', true);
-                } else if (error.message && error.message.includes("quota")) {
-                    showToast('SMS илгээх өдрийн лимит дууссан байна!', true);
-                } else {
-                    // For local development fallback if SMS fails or Firebase project is not fully configured yet
-                    showToast('Утасны сүлжээ шалгаж байна, код илгээлээ.');
-                    document.getElementById('phoneStep').style.display = 'none';
-                    document.getElementById('codeStep').style.display = 'block';
-                }
-            });
+        fetch(`${API_BASE}/auth/send-otp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: phone })
+        })
+        .then(async (response) => {
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.detail || 'Код илгээж чадсангүй.');
+            }
+            const data = await response.json();
+            
+            // Хэрэв DEBUG эсвэл MOCK горимд demo_code/sent_code ирвэл хөгжүүлэлтийг хялбар болгож хэвлэнэ
+            if (data.demo_code) {
+                console.log("[DEBUG] Demo OTP Code:", data.demo_code);
+                showToast(`[DEMO] Код: ${data.demo_code}`);
+            } else {
+                showToast('Баталгаажуулах код амжилттай илгээлээ.');
+            }
+            
+            document.getElementById('phoneStep').style.display = 'none';
+            document.getElementById('codeStep').style.display = 'block';
+        })
+        .catch((error) => {
+            console.error("SMS Request Error:", error);
+            showToast('Алдаа: ' + error.message, true);
+        });
     };
 
     window.verifyOTP = function() {
@@ -1234,62 +1239,28 @@
         
         showToast('Код баталгаажуулж байна...');
         
-        if (window.confirmationResult) {
-            window.confirmationResult.confirm(code)
-                .then(async (result) => {
-                    const idToken = await result.user.getIdToken();
-                    
-                    try {
-                        const response = await fetch(`${API_BASE}/auth/verify-otp`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ phone: phone, code: idToken })
-                        });
-                        
-                        if (!response.ok) {
-                            const errData = await response.json();
-                            throw new Error(errData.detail || 'Нэвтрэлт амжилтгүй боллоо');
-                        }
-                        
-                        const data = await response.json();
-                        isLoggedIn = true;
-                        localStorage.setItem('gz_token', data.access_token);
-                        localStorage.setItem('gz_phone', data.phone);
-                        showToast('Амжилттай нэвтэрлээ!');
-                        hideLogin();
-                        checkAuth();
-                    } catch (err) {
-                        showToast('Алдаа: ' + err.message, true);
-                    }
-                })
-                .catch((error) => {
-                    console.error("Firebase code verification error:", error);
-                    showToast('Баталгаажуулах код буруу байна!', true);
-                });
-        } else {
-            // Local fallback logic (for debug / mock server testing)
-            fetch(`${API_BASE}/auth/verify-otp`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone: phone, code: code })
-            })
-            .then(async (response) => {
-                if (!response.ok) {
-                    const errData = await response.json();
-                    throw new Error(errData.detail || 'Нэвтрэлт амжилтгүй');
-                }
-                const data = await response.json();
-                isLoggedIn = true;
-                localStorage.setItem('gz_token', data.access_token);
-                localStorage.setItem('gz_phone', data.phone);
-                showToast('Амжилттай нэвтэрлээ!');
-                hideLogin();
-                checkAuth();
-            })
-            .catch((err) => {
-                showToast('Код буруу эсвэл систем алдаатай байна.', true);
-            });
-        }
+        fetch(`${API_BASE}/auth/verify-otp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: phone, code: code })
+        })
+        .then(async (response) => {
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.detail || 'Нэвтрэлт амжилтгүй');
+            }
+            const data = await response.json();
+            isLoggedIn = true;
+            localStorage.setItem('gz_token', data.access_token);
+            localStorage.setItem('gz_phone', data.phone);
+            showToast('Амжилттай нэвтэрлээ!');
+            hideLogin();
+            checkAuth();
+        })
+        .catch((err) => {
+            console.error("Verification Error:", err);
+            showToast('Баталгаажуулах код буруу эсвэл систем алдаатай байна.', true);
+        });
     };
     window.checkAuth = function() {
         const token = localStorage.getItem('gz_token');
@@ -1343,70 +1314,20 @@
 </script>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyDBDmWXSZJNIUf6kNb9wSEAvIjIENhmKSM",
-      authDomain: "gazarzar-f79a1.firebaseapp.com",
-      projectId: "gazarzar-f79a1",
-      storageBucket: "gazarzar-f79a1.appspot.com",
-      messagingSenderId: "196882488983",
-      appId: "1:196882488983:web:cedbf93bbe99a01999d3d2"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
     const API_BASE = window.location.origin + "/api";
     let heroMap, postMap, markersGroup, postMarker;
     let isLoggedIn = false;
     let selectedLatLng = null;
     let currentStep = 1;
-    const ADMIN_PHONE = "99910230"; // ТАНЫ ДУГААР ЭНД БАЙНА
+    const ADMIN_PHONE = "99910230";
     window.cachedAgents = [];
-    let allFirebaseListings = [];
+    let allBackendListings = []; // Backend-ийн зарыг хадгалах
 
-    // Setup Firebase Realtime Listener
-    db.collection("listings").orderBy("createdAt", "desc").limit(200).onSnapshot(snapshot => {
-        allFirebaseListings = [];
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            allFirebaseListings.push({ 
-                ...data,
-                id: doc.id, 
-                boost: data.boost || data.boost_status === 'active' || false
-            });
-        });
-
-        // Sync global master list
-        const localListings = JSON.parse(localStorage.getItem('gz_local_listings') || '[]');
-        const firebaseIds = new Set(allFirebaseListings.map(p => p.id));
-        const uniqueLocalListings = localListings.filter(p => !firebaseIds.has(p.id));
-        window.allProperties = [...uniqueLocalListings, ...allFirebaseListings];
-
-        if (typeof fetchListings === 'function') {
-            fetchListings('grid');
-            fetchListings('map');
-        }
-        if (typeof renderAdminDashboard === 'function') {
-            const adminEl = document.getElementById('viewAdmin');
-            if (adminEl && adminEl.classList.contains('active')) {
-                renderAdminDashboard();
-            }
-        }
-    }, error => {
-        console.error("Firebase Snapshot Error:", error);
-        if(error.message.includes("Missing or insufficient permissions")) {
-            setTimeout(() => {
-                if (typeof showToast === 'function') showToast("Firebase алдаа: Датабааз руу хандах эрхгүй байна (Rules шалгана уу)", true);
-            }, 2000);
-        }
-    });
 
     let mapProperties = [];
     let gridProperties = [];
-    let allProperties = []; // Global master list for Admin/Profile
+    let allProperties = [];
     let mapCategory = 'all';
     let gridCategory = 'all';
 
@@ -1436,28 +1357,26 @@
         const grid = isMap ? document.getElementById('mapListingsGrid') : document.getElementById('listingsGrid');
         if (grid) grid.innerHTML = Array(isMap ? 4 : 6).fill('<div class="skeleton skeleton-card"></div>').join('');
         
-        let q, minPrice, maxPrice, listingType, rooms, areaRange, cat, sort;
+        let listingType, rooms, areaRange, cat, sort, minPrice, maxPrice;
 
         if (isMap) {
-            q = mapFilters.q || "";
             minPrice = mapFilters.minPrice || "";
             maxPrice = mapFilters.maxPrice || "";
             listingType = mapFilters.type || "all";
             rooms = mapFilters.rooms || 'all';
             areaRange = mapFilters.area || 'all';
             cat = mapCategory;
-            sort = 'new';
+            sort = 'newest';
         } else {
-            q = document.getElementById('headerSearchInput')?.value?.trim() || gridFilters.q || "";
             minPrice = document.getElementById('minPriceMain')?.value || gridFilters.minPrice || "";
             maxPrice = document.getElementById('maxPriceMain')?.value || gridFilters.maxPrice || "";
             listingType = document.getElementById('filterType')?.value || gridFilters.type || "all";
             rooms = document.getElementById('filterRooms')?.value || gridFilters.rooms || 'all';
             areaRange = document.getElementById('filterAreaRange')?.value || gridFilters.area || 'all';
             cat = gridCategory;
-            sort = document.getElementById('sortOrderTop')?.value || 'new';
+            sort = document.getElementById('sortOrderTop')?.value || 'newest';
         }
-        
+
         let minArea = "";
         let maxArea = "";
         if (areaRange !== 'all') {
@@ -1466,74 +1385,66 @@
             maxArea = parts[1] === 'plus' ? '' : parts[1];
         }
 
+        // Build API query params
+        const params = new URLSearchParams({ limit: '100', offset: '0' });
+        if (listingType && listingType !== 'all') params.set('type', listingType);
+        if (rooms && rooms !== 'all') params.set('rooms', rooms);
+        if (minPrice) params.set('min_price', parseFloat(minPrice) * 1_000_000);
+        if (maxPrice) params.set('max_price', parseFloat(maxPrice) * 1_000_000);
+        if (minArea) params.set('min_area', minArea);
+        if (maxArea) params.set('max_area', maxArea);
+        if (cat && cat !== 'all') params.set('category', cat);
+        if (sort === 'low') params.set('sort', 'cheapest');
+        else if (sort === 'high') params.set('sort', 'expensive');
+        else if (sort === 'area') params.set('sort', 'area');
+        else params.set('sort', 'newest');
+
         try {
-            // Local fallback logic using the merged data
-            const localListings = JSON.parse(localStorage.getItem('gz_local_listings') || '[]');
-            const firebaseIds = new Set(allFirebaseListings.map(p => p.id));
-            const uniqueLocalListings = localListings.filter(p => !firebaseIds.has(p.id));
-            
-            let fallbackData = [...uniqueLocalListings, ...allFirebaseListings];
-
-            if (q) {
-                const norm = normalizeUBQuery(q);
-                fallbackData = fallbackData.filter(p => {
-                    const t = (p.title || '').toLowerCase();
-                    const a = (p.addr || p.address || p.district || '').toLowerCase();
-                    const d = (p.desc || p.description || '').toLowerCase();
-                    return t.includes(norm.original) || a.includes(norm.original) || d.includes(norm.original) ||
-                           t.includes(norm.transliterated) || a.includes(norm.transliterated) || d.includes(norm.transliterated);
-                });
+            const response = await fetch(`${API_BASE}/listings/?${params}`);
+            let apiListings = [];
+            if (response.ok) {
+                const data = await response.json();
+                apiListings = data.items || [];
+                allBackendListings = apiListings;
             }
-            if (minPrice) fallbackData = fallbackData.filter(p => (p.priceVal||p.price||0) >= parseFloat(minPrice) * 1000000);
-            if (maxPrice) fallbackData = fallbackData.filter(p => (p.priceVal||p.price||0) <= parseFloat(maxPrice) * 1000000);
-            if (minArea !== "") fallbackData = fallbackData.filter(p => (p.area||0) >= parseFloat(minArea));
-            if (maxArea !== "") fallbackData = fallbackData.filter(p => (p.area||0) <= parseFloat(maxArea));
-            if (rooms !== 'all') { const rInt = parseInt(rooms); if (rInt >= 4) fallbackData = fallbackData.filter(p => (p.rooms||1) >= 4); else fallbackData = fallbackData.filter(p => (p.rooms||1) === rInt); }
-            if (cat !== 'all') fallbackData = fallbackData.filter(p => p.category === cat);
-            if (listingType !== 'all') fallbackData = fallbackData.filter(p => p.listing_type === listingType || p.type === (listingType==='sale'?'Зарна':'Түрээслүүлнэ'));
 
-            let properties = fallbackData.map(p => {
-                const priceVal = p.priceVal || p.price || 0;
+            const properties = apiListings.map(p => {
+                const priceVal = p.price || 0;
                 return {
                     ...p,
                     priceVal: priceVal,
-                    priceLabel: priceVal >= 1000000000 ? (priceVal/1000000000).toFixed(1) + ' тэрбум ₮' : (priceVal/1000000).toFixed(0) + ' сая ₮',
+                    priceLabel: priceVal >= 1_000_000_000 ? (priceVal/1_000_000_000).toFixed(1) + ' тэрбум ₮' : priceVal >= 1_000_000 ? (priceVal/1_000_000).toFixed(0) + ' сая ₮' : priceVal.toLocaleString() + ' ₮',
                     lat: p.lat || 47.915,
                     lng: p.lng || 106.915,
-                    type: p.type || (p.listing_type === 'sale' ? 'Зарна' : 'Түрээслүүлнэ'),
+                    type: p.listing_type === 'sale' ? 'Зарна' : 'Түрээслүүлнэ',
                     rooms: p.rooms || 1,
                     area: p.area || 0,
                     title: p.title || 'Зар',
-                    addr: p.addr || p.address || p.district || 'Улаанбаатар',
-                    img: p.img || p.primary_image || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1200&q=80',
-                    desc: p.desc || p.description || 'Дэлгэрэнгүй мэдээлэл байхгүй.',
-                    agent: p.agent || p.owner_name || 'Агент',
-                    phone: p.phone || '99XX-XXXX',
-                    boost: p.boost || p.boost_status === 'active' || false,
-                    role: p.role || p.owner_role || 'user',
+                    addr: p.address || p.district || 'Улаанбаатар',
+                    img: p.primary_image || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1200&q=80',
+                    desc: p.description || 'Дэлгэрэнгүй мэдээлэл байхгүй.',
+                    agent: p.owner_name || 'Нэргүй',
+                    phone: p.owner_phone || '',
+                    boost: p.boost_status === 'active',
+                    role: p.owner_role || 'user',
                     category: p.category || 'apartment'
                 };
             });
 
-            if (sort === 'low') properties.sort((a, b) => a.priceVal - b.priceVal);
-            else if (sort === 'high') properties.sort((a, b) => b.priceVal - a.priceVal);
-            else properties.sort((a, b) => {
-                const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-                const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-                return timeB - timeA;
-            });
+            allProperties = properties;
 
-            if (isMap) { 
-                mapProperties = properties; 
-                renderListings(mapProperties, 'map'); 
-            } else { 
-                gridProperties = properties; 
-                allProperties = properties; 
-                renderListings(gridProperties, 'grid'); 
+            if (isMap) {
+                mapProperties = properties;
+                renderListings(mapProperties, 'map');
+            } else {
+                gridProperties = properties;
+                allProperties = properties;
+                renderListings(gridProperties, 'grid');
             }
 
         } catch (error) {
-            console.warn(`Error processing listings:`, error);
+            console.warn('Listings fetch error:', error);
+            if (grid) grid.innerHTML = '<div style="padding:40px; text-align:center; color:#999;">Зар татахад алдаа гарлаа. Сервер ажиллаж байгаа эсэхийг шалгана уу.</div>';
         }
     }
 
@@ -1933,35 +1844,47 @@
             const category = document.getElementById('postCategory').value;
             const address = document.getElementById('postAddressSearch').value;
             const description = document.getElementById('postDesc').value;
-            const phone = document.getElementById('postPhone').value;
+            const rooms = parseInt(document.getElementById('postRooms')?.value) || 1;
             
             if (!title) { showToast('Гарчиг оруулна уу!'); return; }
             if (!price) { showToast('Үнэ оруулна уу!'); return; }
-            if (!phone) { showToast('Утасны дугаар оруулна уу!'); return; }
             if (!selectedLatLng) { showToast('Байршил сонгоно уу!'); return; }
 
             showToast('Зар хадгалж байна...');
 
-            const userPhone = localStorage.getItem('gz_phone') || phone;
+            const token = localStorage.getItem('gz_token');
             const priceVal = parseFloat(price) * 1_000_000;
-            
-            // Handle uploaded photos (base64)
-            let imgUrl = 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1200&q=80';
+
+            // 1. Create listing in backend
+            const listingResp = await fetch(`${API_BASE}/listings/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({
+                    title: title,
+                    description: description,
+                    listing_type: type,
+                    district: address || 'Улаанбаатар',
+                    address: address,
+                    lat: selectedLatLng.lat,
+                    lng: selectedLatLng.lng,
+                    rooms: rooms,
+                    area: parseFloat(area) || null,
+                    price: priceVal,
+                    category: category,
+                    is_new_building: false
+                })
+            });
+
+            if (!listingResp.ok) {
+                const errData = await listingResp.json();
+                throw new Error(errData.detail || 'Зар үүсгэхэд алдаа гарлаа.');
+            }
+
+            const listingData = await listingResp.json();
+            const newListingId = listingData.id;
+
+            // 2. Upload photos if selected
             const mediaInput = document.getElementById('mediaInput');
-            if (mediaInput && mediaInput.files && mediaInput.files[0]) {
-                imgUrl = await new Promise(resolve => {
-                    const reader = new FileReader();
-                    reader.onload = e => {
-                        const img = new Image();
-                        img.onload = () => {
-                            try {
-                                const canvas = document.createElement('canvas');
-                                let width = img.width, height = img.height;
-                                if (width > 800) { height *= 800 / width; width = 800; }
-                                canvas.width = width; canvas.height = height;
-                                canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-                                resolve(canvas.toDataURL('image/jpeg', 0.7));
-                            } catch (err) {
                                 resolve('https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1200&q=80');
                             }
                         };
@@ -2821,68 +2744,49 @@
 
     window.toggleBoost = async function(id) {
         try {
-            const stringId = String(id);
-            if (stringId.startsWith('local_')) {
-                const listings = JSON.parse(localStorage.getItem('gz_local_listings') || '[]');
-                const idx = listings.findIndex(p => String(p.id) === stringId);
-                if (idx !== -1) {
-                    listings[idx].boost = !listings[idx].boost;
-                    localStorage.setItem('gz_local_listings', JSON.stringify(listings));
-                    showToast(listings[idx].boost ? 'Зар BOOST хийгдлээ!' : 'BOOST цуцлагдлаа.');
-                }
+            const token = localStorage.getItem('gz_token');
+            const response = await fetch(`${API_BASE}/admin/listings/${id}/boost`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                showToast(data.boosted ? 'Зар BOOST хийгдлээ! ⭐' : 'BOOST цуцлагдлаа.');
+                // Refresh to reflect changes
+                fetchListings('grid');
+                fetchListings('map');
                 renderAdminDashboard();
             } else {
-                const p = allFirebaseListings.find(x => String(x.id) === stringId);
-                if (p) {
-                    // Optimistic update FIRST
-                    const oldBoost = p.boost;
-                    p.boost = !oldBoost;
-                    p.boost_status = p.boost ? 'active' : 'inactive';
-                    renderAdminDashboard();
-                    
-                    await db.collection("listings").doc(stringId).update({ 
-                        boost_status: p.boost ? 'inactive' : 'active', 
-                        boost: p.boost 
-                    });
-                    showToast(p.boost ? 'Зар BOOST хийгдлээ!' : 'BOOST цуцлагдлаа.');
-                } else {
-                    alert('Зар олдсонгүй (Firebase ID mismatch)');
-                }
+                const err = await response.json();
+                showToast('Boost алдаа: ' + (err.detail || 'Тодорхойгүй'));
             }
         } catch (e) {
             alert('СИСТЕМИЙН АЛДАА (Boost): ' + e.message);
-            console.error("Boost error:", e);
         }
     };
 
     window.deleteListing = async function(id) {
         try {
             if (!confirm('Энэ зарыг устгахдаа итгэлтэй байна уу?')) return;
-            const stringId = String(id);
-            if (stringId.startsWith('local_')) {
-                const listings = JSON.parse(localStorage.getItem('gz_local_listings') || '[]');
-                const filtered = listings.filter(p => String(p.id) !== stringId);
-                localStorage.setItem('gz_local_listings', JSON.stringify(filtered));
-                gridProperties = gridProperties.filter(p => String(p.id) !== stringId);
-                mapProperties = mapProperties.filter(p => String(p.id) !== stringId);
-                allProperties = allProperties.filter(p => String(p.id) !== stringId);
+            const token = localStorage.getItem('gz_token');
+            const response = await fetch(`${API_BASE}/listings/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
                 showToast('Зар устгагдлаа.');
-                renderAdminDashboard();
-                renderListings(gridProperties, 'grid');
-                renderListings(mapProperties, 'map');
-            } else {
-                // Optimistic local update FIRST
-                allFirebaseListings = allFirebaseListings.filter(x => String(x.id) !== stringId);
+                allBackendListings = allBackendListings.filter(p => p.id != id);
+                allProperties = allProperties.filter(p => p.id != id);
                 renderAdminDashboard();
                 fetchListings('grid');
                 fetchListings('map');
-                
-                await db.collection("listings").doc(stringId).delete();
-                showToast('Зар устгагдлаа.');
+            } else {
+                const err = await response.json();
+                showToast('Устгахад алдаа: ' + (err.detail || 'Тодорхойгүй'));
             }
         } catch (e) {
-            alert('СИСТЕМИЙН АЛДАА (Delete): ' + e.message);
-            console.error("Delete error:", e);
+            showToast('СИСТЕМИЙН АЛДАА (Delete): ' + e.message);
+            console.error('Delete error:', e);
         }
     };
 

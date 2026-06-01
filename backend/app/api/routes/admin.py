@@ -89,3 +89,23 @@ def delete_listing(
         db.delete(listing)
         db.commit()
     return {"message": "Амжилттай устгалаа"}
+
+
+@router.post("/listings/{id}/boost")
+def toggle_boost(
+    id: int,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_current_admin_user)
+):
+    listing = db.query(Listing).filter(Listing.id == id).first()
+    if not listing:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Зар олдсонгүй")
+    if listing.boost_status == BoostStatus.active:
+        listing.boost_status = BoostStatus.none
+        boosted = False
+    else:
+        listing.boost_status = BoostStatus.active
+        boosted = True
+    db.commit()
+    return {"boosted": boosted, "boost_status": listing.boost_status.value}

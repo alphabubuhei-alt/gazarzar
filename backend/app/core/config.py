@@ -23,7 +23,12 @@ class Settings(BaseSettings):
     SMS_API_KEY: str = ""
     SMS_API_SECRET: str = ""
     SMS_SENDER: str = "GazarZar"
-    FIREBASE_PROJECT_ID: str = "gazarzar-f79a1"
+    FIREBASE_PROJECT_ID: str = "gazarzar-f79e1"
+
+    SMS_PROVIDER: str = "twilio"  # "twilio", "callpro", "mock"
+    TWILIO_ACCOUNT_SID: str = ""
+    TWILIO_AUTH_TOKEN: str = ""
+    TWILIO_PHONE_NUMBER: str = ""
 
 
     class Config:

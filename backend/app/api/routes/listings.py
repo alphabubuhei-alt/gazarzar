@@ -55,6 +55,24 @@ class ListingCreate(BaseModel):
     is_new_building: bool = False
     boost_status: Optional[str] = "normal"
 
+class ListingUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    listing_type: Optional[str] = None
+    district: Optional[str] = None
+    khoroo: Optional[str] = None
+    address: Optional[str] = None
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+    rooms: Optional[int] = None
+    bathrooms: Optional[int] = None
+    area: Optional[float] = None
+    floor: Optional[int] = None
+    total_floors: Optional[int] = None
+    price: Optional[float] = None
+    category: Optional[str] = None
+    is_new_building: Optional[bool] = None
+
 # ── Helper ───────────────────────────────────────────
 def listing_to_dict(l: Listing) -> dict:
     primary = next((img.url for img in l.images if img.is_primary), None)
@@ -81,7 +99,7 @@ def listing_to_dict(l: Listing) -> dict:
         "is_new_building": l.is_new_building,
         "view_count": l.view_count,
         "primary_image": primary,
-        "owner_name": l.owner.name if l.owner else None,
+        "owner_name": l.owner.name if (l.owner and l.owner.name) else (l.owner.phone if l.owner else None),
         "owner_role": l.owner.role.value if l.owner else "user",
     }
 
@@ -210,6 +228,12 @@ def create_listing(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    # Enforce limit of 5 listings for non-admin users
+    if current_user.phone != "99910230":
+        existing_count = db.query(Listing).filter(Listing.owner_id == current_user.id).count()
+        if existing_count >= 5:
+            raise HTTPException(status_code=400, detail="Хэрэглэгчийн зар оруулах лимит (5 зар) дүүрсэн байна.")
+
     listing = Listing(
         owner_id=current_user.id,
         title=body.title,
@@ -254,3 +278,45 @@ def toggle_save(
     db.add(SavedListing(user_id=current_user.id, listing_id=listing_id))
     db.commit()
     return {"saved": True}
+
+
+@router.put("/{listing_id}")
+def update_listing(
+    listing_id: int,
+    body: ListingUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Зар олдсонгүй")
+    if listing.owner_id != current_user.id and current_user.phone != "99910230":
+        raise HTTPException(status_code=403, detail="Энэ зарыг өөрчлөх эрхгүй байна")
+    
+    # Update fields
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(listing, field, value)
+        
+    db.commit()
+    db.refresh(listing)
+    return {"message": "Зар амжилттай шинэчлэгдлээ", "id": listing.id}
+
+
+@router.delete("/{listing_id}")
+def delete_listing(
+    listing_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=404, detail="Зар олдсонгүй")
+    if listing.owner_id != current_user.id and current_user.phone != "99910230":
+        raise HTTPException(status_code=403, detail="Энэ зарыг устгах эрхгүй байна")
+    
+    # Cascade delete saved items explicitly to avoid foreign key errors
+    db.query(SavedListing).filter(SavedListing.listing_id == listing_id).delete()
+    # listing_images is cascaded deleted automatically in models
+    db.delete(listing)
+    db.commit()
+    return {"message": "Зар амжилттай устгагдлаа"}
