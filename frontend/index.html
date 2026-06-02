@@ -10,7 +10,7 @@
     <meta property="og:description" content="Таны мөрөөдлийн газар, орон сууцыг бид олоход тусална.">
     <meta property="og:image" content="/uploads/logo.png">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
@@ -37,7 +37,7 @@
 
         * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; outline: none; }
         body {
-            font-family: 'DM Sans', sans-serif;
+            font-family: 'Inter', sans-serif;
             background: var(--bg);
             color: var(--text-main);
             height: 100vh;
@@ -741,11 +741,11 @@
                 </div>
             </div>
             <div class="cat-item" onclick="quickPriceRange('', '')" style="height:38px; padding:0 15px;"><span>Бүх үнэ</span></div>
-            <div class="cat-item" onclick="quickPriceRange(0, 50)" style="height:38px; padding:0 15px;"><span>50м хүртэл</span></div>
-            <div class="cat-item" onclick="quickPriceRange(50, 150)" style="height:38px; padding:0 15px;"><span>50-150м</span></div>
-            <div class="cat-item" onclick="quickPriceRange(150, 500)" style="height:38px; padding:0 15px;"><span>150-500м</span></div>
-            <div class="cat-item" onclick="quickPriceRange(500, 1000)" style="height:38px; padding:0 15px;"><span>500м-1т</span></div>
-            <div class="cat-item" onclick="quickPriceRange(1000, null)" style="height:38px; padding:0 15px;"><span>1т +</span></div>
+            <div class="cat-item" onclick="quickPriceRange(0, 50)" style="height:38px; padding:0 15px;"><span>50 сая хүртэл</span></div>
+            <div class="cat-item" onclick="quickPriceRange(50, 150)" style="height:38px; padding:0 15px;"><span>50-150 сая</span></div>
+            <div class="cat-item" onclick="quickPriceRange(150, 500)" style="height:38px; padding:0 15px;"><span>150-500 сая</span></div>
+            <div class="cat-item" onclick="quickPriceRange(500, 1000)" style="height:38px; padding:0 15px;"><span>500 сая - 1 тэрбум</span></div>
+            <div class="cat-item" onclick="quickPriceRange(1000, null)" style="height:38px; padding:0 15px;"><span>1 тэрбум +</span></div>
         </div>
 
         <div class="sheet-content" style="padding-top:10px;">
@@ -1529,7 +1529,7 @@
                     <i data-lucide="${catInfo.i}" style="width:14px; height:14px;"></i> ${catInfo.n}
                 </span>
             </div>
-            <h2 style="font-family:'Playfair Display', serif; font-size:32px; margin-top:8px; line-height:1.2;">${p.title}</h2>
+            <h2 style="font-size:32px; margin-top:8px; line-height:1.2; font-weight: 800;">${p.title}</h2>
             <div class="detail-price-large" style="font-size:36px; margin:16px 0;">${p.priceLabel}</div>
             <div class="detail-meta-small" style="font-weight:700; color:var(--primary); font-size:16px; border-top:1px solid #eee; padding-top:20px; display:flex; justify-content:space-between;">
                 <span>${p.rooms} өрөө</span>
