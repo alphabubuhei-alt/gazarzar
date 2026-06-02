@@ -281,8 +281,7 @@
             display: flex; gap: 16px; margin-top: 12px;
         }
         .detail-price-large {
-            font-family: 'Playfair Display', serif;
-            font-size: 32px; font-weight: 700; margin-top: 8px;
+            font-size: 32px; font-weight: 500; margin-top: 8px;
         }
 
 
@@ -1267,7 +1266,7 @@
     let selectedLatLng = null;
     let currentStep = 1;
     const ADMIN_PHONE = "99910230";
-    const DEFAULT_AVATAR = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%23e0e0e0"/><circle cx="50" cy="42" r="18" fill="%23ffffff"/><path d="M50 65c-15 0-25 8-25 18v2h50v-2c0-10-10-18-25-18z" fill="%23ffffff"/></svg>`;
+    const DEFAULT_AVATAR = `data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI1MCIgZmlsbD0iI2UwZTBlMCIvPjxjaXJjbGUgY3g9IjUwIiBjeT0iNDIiIHI9IjE4IiBmaWxsPSIjZmZmZmZmIi8+PHBhdGggZD0iTTUwIDY1Yy0xNSAwLTI1IDgtMjUgMTh2Mmg1MHYtMmMwLTEwLTEwLTE4LTI1LTE4eiIgZmlsbD0iI2ZmZmZmZiIvPjwvc3ZnPg==`;
     window.cachedAgents = [];
     let allBackendListings = []; // Backend-ийн зарыг хадгалах
 
@@ -1551,7 +1550,6 @@
                 <div style="width:32px; height:32px; border-radius:50%; background:var(--accent); color:white; display:flex; align-items:center; justify-content:center; font-size:14px;">📞</div>
                 <div class="card-phone-val" style="font-weight:800; font-size:15px; color:var(--primary);">${p.phone || '99XX-XXXX'}</div>
             </div>
-            <a href="tel:${p.phone}" style="display:block; margin-top:14px; background:var(--primary); color:white; text-align:center; padding:12px; border-radius:12px; font-weight:800; font-size:14px; text-decoration:none;">📞 ШУУД ЗАЛГАХ</a>
         `;
         if (window.lucide) lucide.createIcons();
 
