@@ -1000,7 +1000,12 @@
                         <button class="btn-post" onclick="searchPostLoc()" style="padding:0 20px; width:auto; font-size:12px;">ХАЙХ</button>
                     </div>
                     <div id="postMap" style="height:280px; border-radius:18px; border:1px solid #eee; z-index:1;"></div>
-                    <p id="coordsText" style="margin-top:12px; color:var(--accent-dark); font-size:12px; font-weight:700;"></p>
+                    <div style="margin-top:12px; display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:12px; font-weight:700; color:var(--primary); white-space:nowrap;">Координат:</span>
+                        <input type="text" id="coordsInput" placeholder="Уртраг, Өргөрөг (Ж: 47.915, 106.915)" 
+                               style="flex:1; padding:8px 12px; border-radius:10px; border:1px solid var(--border); font-size:12px; font-family:inherit; font-weight:700; color:var(--primary); background:white;"
+                               oninput="handleCoordsManualInput(this.value)">
+                    </div>
                 </div>
             </div>
 
@@ -1687,6 +1692,8 @@
         document.getElementById('postArea').value = '';
         document.getElementById('postDesc').value = '';
         document.getElementById('postAddressSearch').value = '';
+        const coordsInput = document.getElementById('coordsInput');
+        if (coordsInput) coordsInput.value = '';
         if (document.getElementById('postPhone')) {
             document.getElementById('postPhone').value = localStorage.getItem('gz_phone') || '';
         }
@@ -1711,11 +1718,30 @@
                 if (postMarker) postMap.removeLayer(postMarker);
                 postMarker = L.marker(e.latlng).addTo(postMap);
                 selectedLatLng = e.latlng;
-                document.getElementById('coordsText').innerText = `Координат: ${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`;
+                const coordsInput = document.getElementById('coordsInput');
+                if (coordsInput) {
+                    coordsInput.value = `${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`;
+                }
             });
         }
         setTimeout(() => postMap.invalidateSize(), 300);
     }
+    window.handleCoordsManualInput = function(val) {
+        if (!val) return;
+        const parts = val.split(/[\s,;/]+/);
+        if (parts.length >= 2) {
+            const lat = parseFloat(parts[0]);
+            const lng = parseFloat(parts[1]);
+            if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                selectedLatLng = { lat, lng };
+                if (postMap) {
+                    postMap.setView([lat, lng], 15);
+                    if (postMarker) postMap.removeLayer(postMarker);
+                    postMarker = L.marker([lat, lng]).addTo(postMap);
+                }
+            }
+        }
+    };
     window.searchPostLoc = async function() {
         const q = document.getElementById('postAddressSearch').value;
         if (!q) return;
@@ -1728,6 +1754,10 @@
                 if (postMarker) postMap.removeLayer(postMarker);
                 postMarker = L.marker(loc).addTo(postMap);
                 selectedLatLng = { lat: loc[0], lng: loc[1] };
+                const coordsInput = document.getElementById('coordsInput');
+                if (coordsInput) {
+                    coordsInput.value = `${loc[0].toFixed(6)}, ${loc[1].toFixed(6)}`;
+                }
             }
         } catch(e) {}
     };
