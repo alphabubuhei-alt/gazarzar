@@ -1678,6 +1678,21 @@
         const mediaInput = document.getElementById('mediaInput');
         if (mediaInput) mediaInput.value = '';
         
+        // Reset form input values
+        document.getElementById('postTitle').value = '';
+        document.getElementById('postPrice').value = '';
+        document.getElementById('postArea').value = '';
+        document.getElementById('postDesc').value = '';
+        document.getElementById('postAddressSearch').value = '';
+        if (document.getElementById('postPhone')) {
+            document.getElementById('postPhone').value = localStorage.getItem('gz_phone') || '';
+        }
+        selectedLatLng = null;
+        if (postMarker && postMap) {
+            postMap.removeLayer(postMarker);
+            postMarker = null;
+        }
+        
         initPostMap();
         currentStep = 1;
         updateStepUI();
@@ -1779,6 +1794,7 @@
         });
     }
     async function submitAd() {
+        const nextBtn = document.getElementById('nextBtn');
         try {
             const title = document.getElementById('postTitle').value;
             const price = document.getElementById('postPrice').value;
@@ -1792,6 +1808,12 @@
             if (!title) { showToast('Гарчиг оруулна уу!'); return; }
             if (!price) { showToast('Үнэ оруулна уу!'); return; }
             if (!selectedLatLng) { showToast('Байршил сонгоно уу!'); return; }
+
+            // Disable submit button during upload to prevent double click
+            if (nextBtn) {
+                nextBtn.disabled = true;
+                nextBtn.innerText = 'ХАДГАЛЖ БАЙНА...';
+            }
 
             showToast('Зар хадгалж байна...');
 
@@ -1826,68 +1848,28 @@
             const listingData = await listingResp.json();
             const newListingId = listingData.id;
 
-            // 2. Upload photos if selected
-            let imgUrl = 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1200&q=80';
-            const mediaInput = document.getElementById('mediaInput');
-            if (mediaInput && mediaInput.files && mediaInput.files[0]) {
-                imgUrl = await new Promise(resolve => {
-                    const reader = new FileReader();
-                    reader.onload = e => {
-                        const img = new Image();
-                        img.onload = () => {
-                            try {
-                                const canvas = document.createElement('canvas');
-                                let width = img.width, height = img.height;
-                                if (width > 800) { height *= 800 / width; width = 800; }
-                                canvas.width = width; canvas.height = height;
-                                canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-                                resolve(canvas.toDataURL('image/jpeg', 0.7));
-                            } catch (err) {
-                                resolve('https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1200&q=80');
-                            }
-                        };
-                        img.onerror = () => resolve('https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1200&q=80');
-                        img.src = e.target.result;
-                    };
-                    reader.onerror = () => resolve('https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1200&q=80');
-                    reader.readAsDataURL(mediaInput.files[0]);
+            // 2. Upload photos to backend if selected
+            if (selectedFilesForUpload && selectedFilesForUpload.length > 0) {
+                showToast('Зургуудыг хуулж байна...');
+                const formData = new FormData();
+                selectedFilesForUpload.forEach(file => {
+                    formData.append('files', file);
                 });
+                const uploadResp = await fetch(`${API_BASE}/upload/listing/${newListingId}/images`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+                if (!uploadResp.ok) {
+                    const uploadErr = await uploadResp.json();
+                    throw new Error(uploadErr.detail || 'Зургуудыг оруулахад алдаа гарлаа.');
+                }
             }
 
-            const newListing = {
-                id: 'local_' + Date.now(),
-                title: title,
-                priceVal: priceVal,
-                priceLabel: priceVal >= 1_000_000_000 ? (priceVal/1_000_000_000).toFixed(1) + ' тэрбум ₮' : (priceVal/1_000_000).toFixed(0) + ' сая ₮',
-                area: parseFloat(area) || 0,
-                listing_type: type,
-                type: type === 'sale' ? 'Зарна' : 'Түрээслүүлнэ',
-                category: category,
-                addr: address || 'Улаанбаатар',
-                desc: description,
-                lat: selectedLatLng.lat,
-                lng: selectedLatLng.lng,
-                img: imgUrl,
-                agent: localStorage.getItem('gz_phone'),
-                phone: localStorage.getItem('gz_phone'),
-                rooms: parseInt(document.getElementById('postRooms')?.value) || 1,
-                boost: false,
-                role: 'user',
-                createdAt: new Date().toISOString()
-            };
-
-            try {
-                const firebaseListing = { ...newListing };
-                delete firebaseListing.id; // DO NOT upload the local_ ID to Firebase!
-                await db.collection("listings").add(firebaseListing);
-            } catch (e) {
-                console.error("Error adding document: ", e);
-                showToast("Алдаа: Датабааз руу хуулагдсангүй (Firebase Rules шалгана уу)");
-                // Fallback to local storage if Firebase fails
-                const saved = JSON.parse(localStorage.getItem('gz_local_listings') || '[]');
-                saved.unshift(newListing);
-                localStorage.setItem('gz_local_listings', JSON.stringify(saved));
-            }
+            // Clear media state after success
+            selectedFilesForUpload = [];
+            const mediaPreview = document.getElementById('mediaPreview');
+            if (mediaPreview) mediaPreview.innerHTML = '';
 
             hidePostAd();
             document.getElementById('successOverlay').style.display = 'flex';
@@ -1898,6 +1880,11 @@
         } catch (err) {
             console.error("submitAd error:", err);
             showToast('Зар нэмэхэд алдаа гарлаа: ' + err.message, true);
+        } finally {
+            if (nextBtn) {
+                nextBtn.disabled = false;
+                nextBtn.innerText = 'ЗАР НИЙТЛЭХ';
+            }
         }
     }
 
@@ -2605,11 +2592,29 @@
     window.renderAdminDashboard = function() {
         const q = (document.getElementById('adminSearchInput')?.value || '').toLowerCase();
         
-        // Combine all listings directly to ignore any homepage filters
-        const localListings = JSON.parse(localStorage.getItem('gz_local_listings') || '[]');
-        const firebaseIds = new Set(allFirebaseListings.map(p => p.id));
-        const uniqueLocalListings = localListings.filter(p => !firebaseIds.has(p.id));
-        const allListings = [...uniqueLocalListings, ...allFirebaseListings];
+        // Map backend listings to layout structure
+        const allListings = allBackendListings.map(p => {
+            const priceVal = p.price || 0;
+            return {
+                ...p,
+                priceVal: priceVal,
+                priceLabel: priceVal >= 1_000_000_000 ? (priceVal/1_000_000_000).toFixed(1) + ' тэрбум ₮' : priceVal >= 1_000_000 ? (priceVal/1_000_000).toFixed(0) + ' сая ₮' : priceVal.toLocaleString() + ' ₮',
+                lat: p.lat || 47.915,
+                lng: p.lng || 106.915,
+                type: p.listing_type === 'sale' ? 'Зарна' : 'Түрээслүүлнэ',
+                rooms: p.rooms || 1,
+                area: p.area || 0,
+                title: p.title || 'Зар',
+                addr: p.address || p.district || 'Улаанбаатар',
+                img: p.primary_image || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1200&q=80',
+                desc: p.description || 'Дэлгэрэнгүй мэдээлэл байхгүй.',
+                agent: p.owner_name || 'Нэргүй',
+                phone: p.owner_phone || '',
+                boost: p.boost_status === 'active',
+                role: p.owner_role || 'user',
+                category: p.category || 'apartment'
+            };
+        });
         
         const filtered = allListings.filter(p => (p.title || '').toLowerCase().includes(q));
 
