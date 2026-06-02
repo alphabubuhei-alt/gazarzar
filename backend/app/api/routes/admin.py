@@ -50,6 +50,7 @@ def get_admin_stats(
         agents_data.append({
             "id": a.id,
             "name": a.user.name if a.user else "Unknown",
+            "phone": a.user.phone if a.user else "—",
             "company": "Үл хөдлөх хөрөнгийн зуучлал", # Default
             "listings_count": len(a.user.listings) if a.user else 0,
             "rating": a.rating

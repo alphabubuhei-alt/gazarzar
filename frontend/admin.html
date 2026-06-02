@@ -8,40 +8,147 @@
     <style>
         :root { 
             --primary: #2d5a27;
+            --primary-light: #e8f5e9;
+            --danger: #c62828;
+            --danger-light: #ffebee;
+            --warning: #856404;
+            --warning-light: #fff3cd;
+            --info: #0d47a1;
+            --info-light: #e3f2fd;
+            --boost: #f59e0b;
+            --boost-light: #fffde7;
             --bg: #f4f7f6;
             --text-main: #1a1e23;
+            --card-shadow: 0 2px 12px rgba(0,0,0,0.07);
         }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
         body { background-color: var(--bg); color: var(--text-main); }
         
-        .login-container {
-            display: flex; height: 100vh; align-items: center; justify-content: center;
-        }
+        /* LOGIN */
+        .login-container { display: flex; height: 100vh; align-items: center; justify-content: center; }
         .login-card {
-            background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            width: 400px; text-align: center;
+            background: white; padding: 40px; border-radius: 20px; 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.12); width: 400px; text-align: center;
         }
-        .login-card input { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
-        .login-card button { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
+        .login-card h2 { margin-bottom: 8px; font-size: 24px; font-weight: 800; }
+        .login-card p { color: #666; margin-bottom: 28px; font-size: 14px; }
+        .login-card input { 
+            width: 100%; padding: 13px 16px; margin-bottom: 16px; 
+            border: 1.5px solid #e0e0e0; border-radius: 10px; font-size: 15px; outline: none;
+            transition: border-color 0.2s;
+        }
+        .login-card input:focus { border-color: var(--primary); }
+        .login-card button { 
+            width: 100%; padding: 14px; background: var(--primary); color: white; 
+            border: none; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 15px;
+            transition: opacity 0.2s;
+        }
+        .login-card button:hover { opacity: 0.88; }
         
-        #adminView { display: none; padding: 40px; max-width: 1200px; margin: 0 auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 30px; }
-        .stat-card { background: white; border-radius: 14px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        /* ADMIN VIEW */
+        #adminView { display: none; padding: 32px 40px; max-width: 1280px; margin: 0 auto; }
         
-        .tables-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
-        .table-card { background: white; border-radius: 16px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .header { 
+            display: flex; justify-content: space-between; align-items: center; 
+            margin-bottom: 28px; flex-wrap: wrap; gap: 12px;
+        }
+        .header h2 { font-size: 26px; font-weight: 800; }
+        .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        
+        .btn-header { 
+            padding: 7px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; 
+            cursor: pointer; border: none; transition: opacity 0.2s; text-decoration: none;
+            display: inline-flex; align-items: center; gap: 5px;
+        }
+        .btn-header:hover { opacity: 0.8; }
+        .btn-refresh { background: var(--primary-light); color: var(--primary); border: 1px solid #c8e6c9; }
+        .btn-site { background: white; color: var(--primary); border: 1px solid #c8e6c9; }
+        .btn-logout { background: none; border: none; color: var(--danger); font-weight: 600; cursor: pointer; font-size: 13px; }
+        .status-badge { 
+            background: var(--primary-light); color: var(--primary); 
+            padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700;
+        }
+
+        /* STATS */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; margin-bottom: 28px; }
+        .stat-card { 
+            background: white; border-radius: 14px; padding: 20px; 
+            box-shadow: var(--card-shadow); transition: transform 0.2s;
+        }
+        .stat-card:hover { transform: translateY(-2px); }
+        .stat-icon { font-size: 26px; margin-bottom: 8px; }
+        .stat-val { font-size: 26px; font-weight: 800; }
+        .stat-label { font-size: 12px; color: #888; font-weight: 600; margin-top: 2px; }
+
+        /* TABLES */
+        .tables-grid { display: grid; grid-template-columns: 1fr; gap: 22px; }
         @media (min-width: 1024px) {
             .tables-grid { grid-template-columns: 1fr 1fr; }
             .full-width { grid-column: span 2; }
         }
+        .table-card { background: white; border-radius: 16px; padding: 24px; box-shadow: var(--card-shadow); }
+        .table-card h3 { margin-bottom: 16px; font-size: 15px; font-weight: 800; }
+
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #f0f0f0; }
-        th { background: #f4f7f6; font-weight: 600; color: #666; }
+        th { padding: 10px 12px; text-align: left; background: #f8faf9; font-weight: 700; color: #555; border-bottom: 2px solid #f0f0f0; }
+        td { padding: 11px 12px; border-bottom: 1px solid #f5f5f5; vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #fafcfa; }
+
+        /* ACTION BUTTONS */
+        .btn-action { 
+            padding: 5px 10px; border: none; border-radius: 6px; cursor: pointer; 
+            font-weight: 700; font-size: 11px; transition: opacity 0.2s; white-space: nowrap;
+        }
+        .btn-action:hover { opacity: 0.8; }
+        .btn-approve { background: var(--primary-light); color: var(--primary); }
+        .btn-delete  { background: var(--danger-light); color: var(--danger); }
+        .btn-boost   { background: var(--boost-light); color: #b45309; border: 1px solid #fde68a; }
+        .btn-boost.boosted { background: var(--boost); color: white; border-color: var(--boost); }
+        .btn-phone   { background: var(--info-light); color: var(--info); border: 1px solid #bbdefb; }
         
-        .btn-action { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 11px; }
-        .btn-approve { background: #e8f5e9; color: #2d5a27; }
-        .btn-delete { background: #ffebee; color: #c62828; }
+        .actions-cell { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+
+        /* STATUS TAGS */
+        .tag { display: inline-block; padding: 3px 9px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+        .tag-active   { background: var(--primary-light); color: var(--primary); }
+        .tag-pending  { background: var(--warning-light); color: var(--warning); }
+        .tag-boosted  { background: var(--boost-light); color: #b45309; }
+        .tag-admin    { background: var(--danger-light); color: var(--danger); }
+        .tag-user     { background: var(--primary-light); color: var(--primary); }
+        .tag-agent    { background: var(--info-light); color: var(--info); }
+
+        /* BOOST MODAL */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+            z-index: 9999; align-items: center; justify-content: center;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal {
+            background: white; border-radius: 20px; padding: 36px 32px; 
+            max-width: 420px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            animation: modalIn 0.25s ease;
+        }
+        @keyframes modalIn { from { transform: scale(0.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .modal h3 { font-size: 20px; font-weight: 800; margin-bottom: 8px; }
+        .modal p  { color: #666; font-size: 14px; margin-bottom: 24px; line-height: 1.6; }
+        .modal-actions { display: flex; gap: 10px; }
+        .modal-actions button { flex: 1; padding: 12px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; font-size: 14px; transition: opacity 0.2s; }
+        .modal-actions button:hover { opacity: 0.85; }
+        .btn-modal-confirm { background: var(--boost); color: white; }
+        .btn-modal-cancel  { background: #f5f5f5; color: #333; }
+        .btn-modal-unboost { background: var(--danger); color: white; }
+
+        /* PHONE TOOLTIP */
+        .phone-reveal { 
+            display: inline-flex; align-items: center; gap: 6px; 
+            background: var(--info-light); color: var(--info); 
+            padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 700;
+            cursor: pointer; border: 1px solid #bbdefb; transition: background 0.2s;
+        }
+        .phone-reveal:hover { background: #c5dff9; }
+
+        .empty-state { text-align: center; padding: 30px; color: #bbb; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -49,65 +156,86 @@
     <!-- LOGIN SCREEN -->
     <div class="login-container" id="loginView">
         <div class="login-card">
-            <h2 style="margin-bottom: 10px;">Админ Нэвтрэх</h2>
-            <p style="color: #666; margin-bottom: 30px; font-size: 14px;">Зөвхөн админ эрхтэй дугаараар нэвтэрнэ үү.</p>
-            <div>
-                <input type="text" id="adminPhone" placeholder="Утасны дугаар (Ж: 99111111)" style="margin-bottom: 20px;">
-                <button onclick="adminLogin()">НЭВТРЭХ</button>
-            </div>
+            <h2>⚙ Админ Нэвтрэх</h2>
+            <p>Зөвхөн админ эрхтэй дугаараар нэвтэрнэ үү.</p>
+            <input type="text" id="adminPhone" placeholder="Утасны дугаар (Ж: 99111111)">
+            <button onclick="adminLogin()">НЭВТРЭХ</button>
         </div>
     </div>
 
     <!-- ADMIN DASHBOARD -->
     <div id="adminView">
         <div class="header">
-            <h2 style="font-size:28px; font-weight:800;">⚙ Админ Хяналтын Самбар</h2>
-            <div>
-                <button onclick="checkAuth()" style="background:#e8f5e9; border:1px solid #c8e6c9; color:#2d5a27; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:700; margin-right:20px; cursor:pointer; transition:0.2s;" onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=1">🔄 ШИНЭЧЛЭХ</button>
-                <a href="/" style="text-decoration:none; color:var(--primary); font-weight:700; font-size:13px; margin-right:20px;">🏠 САЙТ ҮЗЭХ</a>
-                <span style="background:#e8f5e9; color:#2d5a27; padding:6px 16px; border-radius:20px; font-size:13px; font-weight:700; margin-right: 15px;">● Ажиллаж байна</span>
-                <button onclick="logout()" style="background:none; border:none; color:red; font-weight:600; cursor:pointer;">Гарах</button>
+            <h2>⚙ Админ Хяналтын Самбар</h2>
+            <div class="header-actions">
+                <button class="btn-header btn-refresh" onclick="checkAuth()">🔄 Шинэчлэх</button>
+                <a href="/" class="btn-header btn-site">🏠 Сайт үзэх</a>
+                <span class="status-badge">● Ажиллаж байна</span>
+                <button class="btn-logout" onclick="logout()">Гарах</button>
             </div>
         </div>
-        
+
+        <!-- STATS -->
         <div class="stats-grid" id="adminStats"></div>
-        
+
+        <!-- TABLES -->
         <div class="tables-grid">
-            <div class="table-card full-width" id="pendingSection" style="display:none; border-left: 5px solid #ffc107;">
-                <h3 style="margin-bottom:16px; font-size:16px; font-weight:800; color:#856404;">⏳ Батлах хүлээгдэж буй зарууд</h3>
+
+            <!-- PENDING -->
+            <div class="table-card full-width" id="pendingSection" style="display:none; border-left:5px solid #ffc107;">
+                <h3 style="color:#856404;">⏳ Батлах хүлээгдэж буй зарууд</h3>
                 <div id="adminPendingTable"></div>
             </div>
-            <div class="table-card">
-                <h3 style="margin-bottom:16px; font-size:16px; font-weight:800;">Бүх зарууд</h3>
+
+            <!-- ALL LISTINGS -->
+            <div class="table-card full-width">
+                <h3>📋 Бүх зарууд</h3>
                 <div id="adminListingTable"></div>
             </div>
+
+            <!-- AGENTS -->
             <div class="table-card">
-                <h3 style="margin-bottom:16px; font-size:16px; font-weight:800;">Агентуудын жагсаалт</h3>
+                <h3>👔 Агентуудын жагсаалт</h3>
                 <div id="adminAgentTable"></div>
             </div>
-            <div class="table-card full-width">
-                <h3 style="margin-bottom:16px; font-size:16px; font-weight:800;">👤 Бүртгэлтэй хэрэглэгчид</h3>
+
+            <!-- USERS -->
+            <div class="table-card">
+                <h3>👤 Бүртгэлтэй хэрэглэгчид</h3>
                 <div id="adminUsersTable"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- BOOST MODAL -->
+    <div class="modal-overlay" id="boostModal">
+        <div class="modal">
+            <h3 id="boostModalTitle">⭐ Зарыг Boost хийх</h3>
+            <p id="boostModalDesc">Энэ зарыг Featured болгон дэлгэцийн эхэнд гаргах уу?</p>
+            <div class="modal-actions">
+                <button class="btn-modal-cancel" onclick="closeBoostModal()">Болих</button>
+                <button id="boostModalConfirm" class="btn-modal-confirm" onclick="confirmBoost()">⭐ Boost хийх</button>
             </div>
         </div>
     </div>
 
     <script>
         const API_BASE = '/api';
-        
+        let boostTargetId = null;
+        let boostCurrentStatus = null;
+
+        // ── AUTH ────────────────────────────────────────────────
         async function checkAuth() {
             const gz_token = localStorage.getItem('gz_token');
             if (!gz_token) {
-                document.getElementById('loginView').style.display = 'flex';
-                document.getElementById('adminView').style.display = 'none';
+                showLogin();
                 return;
             }
-            // Fetch data, if 403 Forbidden, gz_token is invalid or not admin
             try {
                 const res = await fetch(`${API_BASE}/admin`, {
                     headers: { 'Authorization': `Bearer ${gz_token}` }
                 });
-                
                 if (res.ok) {
                     const data = await res.json();
                     document.getElementById('loginView').style.display = 'none';
@@ -118,13 +246,18 @@
                     logout();
                 }
             } catch (e) {
-                console.error("Connection error", e);
+                console.error('Connection error', e);
             }
         }
 
+        function showLogin() {
+            document.getElementById('loginView').style.display = 'flex';
+            document.getElementById('adminView').style.display = 'none';
+        }
+
         async function adminLogin() {
-            const phone = document.getElementById('adminPhone').value;
-            if (!phone) return alert("Дугаараа оруулна уу");
+            const phone = document.getElementById('adminPhone').value.trim();
+            if (!phone) return alert('Дугаараа оруулна уу');
             const res = await fetch(`${API_BASE}/auth/phone-login`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ phone })
@@ -132,9 +265,9 @@
             const data = await res.json();
             if (res.ok) {
                 localStorage.setItem('gz_token', data.access_token);
-                checkAuth(); // Reload
+                checkAuth();
             } else {
-                alert(data.detail || "Алдаа гарлаа");
+                alert(data.detail || 'Алдаа гарлаа');
             }
         }
 
@@ -143,138 +276,257 @@
             location.reload();
         }
 
+        // ── RENDER ──────────────────────────────────────────────
         function renderAdmin(data) {
-            const statsEl = document.getElementById('adminStats');
-            const cards = [
-                {label:'Нийт зар', val: data.total_listings, icon:'🏠', color:'#2d5a27'},
-                {label:'Идэвхтэй', val: data.active_listings, icon:'✅', color:'#28a745'},
-                {label:'Boosted', val: data.boosted_listings, icon:'⭐', color:'#f59e0b'},
-                {label:'Агентууд', val: data.total_agents, icon:'👔', color:'#007bff'},
-                {label:'Хэрэглэгч', val: data.total_users, icon:'👤', color:'#6f42c1'},
-                {label:'Орлого ₮', val: data.revenue_this_month ? data.revenue_this_month.toLocaleString() : '-', icon:'💰', color:'#e83e8c'},
-            ];
-            statsEl.innerHTML = cards.map(c => `
-                <div class="stat-card" style="border-left:4px solid ${c.color};">
-                    <div style="font-size:28px;margin-bottom:6px;">${c.icon}</div>
-                    <div style="font-size:24px;font-weight:800;color:${c.color};">${c.val}</div>
-                    <div style="font-size:13px;color:#666;font-weight:600;">${c.label}</div>
-                </div>`).join('');
-
-            // Pending Listings
-            const pending = data.listings.filter(l => l.status !== 'active');
-            const pendingEl = document.getElementById('adminPendingTable');
-            const pendingSection = document.getElementById('pendingSection');
-            
-            if (pending.length > 0) {
-                pendingSection.style.display = 'block';
-                pendingEl.innerHTML = `<table>
-                    <thead><tr><th>Гарчиг</th><th>Үнэ</th><th>Үйлдэл</th></tr></thead>
-                    <tbody>${pending.map(l => `
-                        <tr>
-                            <td style="font-weight:600;">${l.title}</td>
-                            <td style="color:var(--primary); font-weight:700;">${l.price ? l.price.toLocaleString()+'₮' : '-'}</td>
-                            <td>
-                                <button class="btn-action btn-approve" onclick="approveListing(${l.id})">БАТЛАХ</button>
-                                <button class="btn-action btn-delete" onclick="deleteListing(${l.id})">УСТГАХ</button>
-                            </td>
-                        </tr>
-                    `).join('')}</tbody>
-                </table>`;
-            } else {
-                pendingSection.style.display = 'none';
-            }
-
-            // All Listings Table
-            const listingsEl = document.getElementById('adminListingTable');
-            listingsEl.innerHTML = `<table>
-                <thead><tr><th>Гарчиг</th><th>Төлөв</th></tr></thead>
-                <tbody>${data.listings.map(l => `
-                    <tr>
-                        <td style="font-weight:600;">${l.title.substring(0, 30)}...</td>
-                        <td><span style="background:${l.status==='active'?'#e8f5e9':'#fff3cd'}; padding:4px 8px; border-radius:10px; font-size:11px;">${l.status==='active'?'Идэвхтэй':'Хүлээгдэж буй'}</span></td>
-                    </tr>
-                `).join('')}</tbody>
-            </table>`;
-
-            // Agents Table
-            const agentsEl = document.getElementById('adminAgentTable');
-            agentsEl.innerHTML = `<table>
-                <thead><tr><th>Нэр</th><th>Зар</th><th>Үнэлгээ</th></tr></thead>
-                <tbody>${data.agents.map(a => `
-                    <tr>
-                        <td style="font-weight:700;">${a.name}</td>
-                        <td style="color:var(--primary); font-weight:700;">${a.listings_count}</td>
-                        <td>⭐ ${a.rating}</td>
-                    </tr>
-                `).join('')}</tbody>
-            </table>`;
-
-            // Users Table
+            renderStats(data);
+            renderPending(data.listings);
+            renderAllListings(data.listings);
+            renderAgents(data.agents);
             renderUsers(data.users);
         }
 
-        async function approveListing(id) {
-            if (!confirm("Энэ зарыг батлах уу?")) return;
-            const gz_token = localStorage.getItem('gz_token');
-            const res = await fetch(`${API_BASE}/admin/listings/${id}/approve`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${gz_token}` }
-            });
-            if (res.ok) {
-                alert("Амжилттай баталлаа");
-                location.reload();
-            } else {
-                alert("Алдаа гарлаа");
-            }
-        }
-        
-        async function deleteListing(id) {
-            if (!confirm("Энэ зарыг бүр мөсөн устгах уу?")) return;
-            const gz_token = localStorage.getItem('gz_token');
-            const res = await fetch(`${API_BASE}/admin/listings/${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${gz_token}` }
-            });
-            if (res.ok) {
-                alert("Амжилттай устгалаа");
-                location.reload();
-            } else {
-                alert("Алдаа гарлаа");
-            }
+        function renderStats(data) {
+            const statsEl = document.getElementById('adminStats');
+            const cards = [
+                { label: 'Нийт зар',  val: data.total_listings,  icon: '🏠', color: '#2d5a27' },
+                { label: 'Идэвхтэй',  val: data.active_listings,  icon: '✅', color: '#28a745' },
+                { label: 'Boosted',    val: data.boosted_listings, icon: '⭐', color: '#f59e0b' },
+                { label: 'Агентууд',  val: data.total_agents,     icon: '👔', color: '#007bff' },
+                { label: 'Хэрэглэгч', val: data.total_users,      icon: '👤', color: '#6f42c1' },
+                { label: 'Орлого ₮',  val: data.revenue_this_month ? data.revenue_this_month.toLocaleString() : '—', icon: '💰', color: '#e83e8c' },
+            ];
+            statsEl.innerHTML = cards.map(c => `
+                <div class="stat-card" style="border-left:4px solid ${c.color};">
+                    <div class="stat-icon">${c.icon}</div>
+                    <div class="stat-val" style="color:${c.color};">${c.val}</div>
+                    <div class="stat-label">${c.label}</div>
+                </div>`).join('');
         }
 
+        function renderPending(listings) {
+            const pending = listings.filter(l => l.status !== 'active');
+            const section = document.getElementById('pendingSection');
+            const el = document.getElementById('adminPendingTable');
+            if (pending.length === 0) { section.style.display = 'none'; return; }
+            section.style.display = 'block';
+            el.innerHTML = `<table>
+                <thead><tr><th>Гарчиг</th><th>Үнэ</th><th>Үйлдэл</th></tr></thead>
+                <tbody>${pending.map(l => `
+                    <tr>
+                        <td style="font-weight:600;">${escHtml(l.title)}</td>
+                        <td style="color:var(--primary); font-weight:700;">${formatPrice(l.price)}</td>
+                        <td>
+                            <div class="actions-cell">
+                                <button class="btn-action btn-approve" onclick="approveListing(${l.id})">✅ БАТЛАХ</button>
+                                <button class="btn-action btn-delete"  onclick="deleteListing(${l.id})">🗑 УСТГАХ</button>
+                            </div>
+                        </td>
+                    </tr>`).join('')}
+                </tbody></table>`;
+        }
 
-
-        function renderUsers(users) {
-            const usersEl = document.getElementById('adminUsersTable');
-            if (!usersEl) return;
-            usersEl.innerHTML = `<table>
+        function renderAllListings(listings) {
+            const el = document.getElementById('adminListingTable');
+            if (!listings || listings.length === 0) {
+                el.innerHTML = '<div class="empty-state">Зар байхгүй байна</div>'; return;
+            }
+            el.innerHTML = `<table>
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>Утасны дугаар</th>
+                        <th>Гарчиг</th>
+                        <th>Үнэ</th>
+                        <th>Төлөв</th>
+                        <th>Үйлдэл</th>
+                    </tr>
+                </thead>
+                <tbody>${listings.map(l => {
+                    const isBoosted = l.boost_status === 'active';
+                    return `
+                    <tr>
+                        <td style="color:#aaa; font-size:12px;">#${l.id}</td>
+                        <td style="font-weight:600; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escHtml(l.title)}</td>
+                        <td style="color:var(--primary); font-weight:700; white-space:nowrap;">${formatPrice(l.price)}</td>
+                        <td>
+                            <span class="tag ${l.status === 'active' ? 'tag-active' : 'tag-pending'}">
+                                ${l.status === 'active' ? 'Идэвхтэй' : 'Хүлээгдэж буй'}
+                            </span>
+                            ${isBoosted ? '<span class="tag tag-boosted" style="margin-left:4px;">⭐ Boosted</span>' : ''}
+                        </td>
+                        <td>
+                            <div class="actions-cell">
+                                <button class="btn-action btn-boost ${isBoosted ? 'boosted' : ''}"
+                                    onclick="openBoostModal(${l.id}, '${isBoosted ? 'active' : 'none'}', '${escHtml(l.title)}')">
+                                    ${isBoosted ? '⭐ Unboost' : '⭐ Boost'}
+                                </button>
+                                <button class="btn-action btn-delete" onclick="deleteListing(${l.id})">🗑 Устгах</button>
+                            </div>
+                        </td>
+                    </tr>`;
+                }).join('')}
+                </tbody></table>`;
+        }
+
+        function renderAgents(agents) {
+            const el = document.getElementById('adminAgentTable');
+            if (!agents || agents.length === 0) {
+                el.innerHTML = '<div class="empty-state">Агент бүртгэлгүй байна</div>'; return;
+            }
+            el.innerHTML = `<table>
+                <thead><tr><th>Нэр</th><th>Зар</th><th>Үнэлгээ</th><th>Утас</th></tr></thead>
+                <tbody>${agents.map(a => `
+                    <tr>
+                        <td style="font-weight:700;">${escHtml(a.name)}</td>
+                        <td style="color:var(--primary); font-weight:700;">${a.listings_count}</td>
+                        <td>⭐ ${a.rating ?? '—'}</td>
+                        <td>
+                            <span class="phone-reveal" onclick="revealPhone(this, '${escHtml(a.phone || '—')}')">
+                                📞 Харах
+                            </span>
+                        </td>
+                    </tr>`).join('')}
+                </tbody></table>`;
+        }
+
+        function renderUsers(users) {
+            const el = document.getElementById('adminUsersTable');
+            if (!users || users.length === 0) {
+                el.innerHTML = '<div class="empty-state">Хэрэглэгч бүртгэлгүй байна</div>'; return;
+            }
+            el.innerHTML = `<table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
                         <th>Нэр</th>
-                        <th>Үүрэг (Role)</th>
-                        <th>Зарын тоо</th>
-                        <th>Бүртгүүлсэн огноо</th>
+                        <th>Үүрэг</th>
+                        <th>Зар</th>
+                        <th>Утас</th>
+                        <th>Огноо</th>
                     </tr>
                 </thead>
                 <tbody>${users.map(u => `
                     <tr>
-                        <td>${u.id}</td>
-                        <td style="font-weight:700;">${u.phone}</td>
-                        <td>${u.name}</td>
-                        <td><span style="background:${u.role==='admin'?'#ffebee':'#e8f5e9'}; color:${u.role==='admin'?'#c62828':'#2d5a27'}; padding:4px 8px; border-radius:10px; font-size:11px; font-weight:700;">${u.role}</span></td>
+                        <td style="color:#aaa; font-size:12px;">#${u.id}</td>
+                        <td style="font-weight:600;">${escHtml(u.name || '—')}</td>
+                        <td><span class="tag ${u.role === 'admin' ? 'tag-admin' : u.role === 'agent' ? 'tag-agent' : 'tag-user'}">${u.role}</span></td>
                         <td style="font-weight:700;">${u.listings_count}</td>
-                        <td>${u.created_at ? new Date(u.created_at).toLocaleString('mn-MN') : '—'}</td>
-                    </tr>
-                `).join('')}</tbody>
-            </table>`;
+                        <td>
+                            <span class="phone-reveal" onclick="revealPhone(this, '${escHtml(u.phone || '—')}')">
+                                📞 Харах
+                            </span>
+                        </td>
+                        <td style="font-size:12px; color:#888;">${u.created_at ? new Date(u.created_at).toLocaleDateString('mn-MN') : '—'}</td>
+                    </tr>`).join('')}
+                </tbody></table>`;
         }
 
-        // Init
+        // ── PHONE REVEAL ────────────────────────────────────────
+        function revealPhone(el, phone) {
+            el.textContent = phone;
+            el.style.cursor = 'default';
+            el.onclick = null;
+            el.style.background = '#e3f2fd';
+        }
+
+        // ── LISTING ACTIONS ─────────────────────────────────────
+        async function approveListing(id) {
+            if (!confirm('Энэ зарыг батлах уу?')) return;
+            const gz_token = localStorage.getItem('gz_token');
+            const res = await fetch(`${API_BASE}/admin/listings/${id}/approve`, {
+                method: 'POST', headers: { 'Authorization': `Bearer ${gz_token}` }
+            });
+            if (res.ok) { showToast('✅ Амжилттай баталлаа!'); checkAuth(); }
+            else alert('Алдаа гарлаа');
+        }
+
+        async function deleteListing(id) {
+            if (!confirm('Энэ зарыг бүр мөсөн устгах уу? Энэ үйлдлийг буцаах боломжгүй!')) return;
+            const gz_token = localStorage.getItem('gz_token');
+            const res = await fetch(`${API_BASE}/admin/listings/${id}`, {
+                method: 'DELETE', headers: { 'Authorization': `Bearer ${gz_token}` }
+            });
+            if (res.ok) { showToast('🗑 Зар устгагдлаа'); checkAuth(); }
+            else alert('Алдаа гарлаа');
+        }
+
+        // ── BOOST MODAL ─────────────────────────────────────────
+        function openBoostModal(id, currentStatus, title) {
+            boostTargetId = id;
+            boostCurrentStatus = currentStatus;
+            const isBoosted = currentStatus === 'active';
+            document.getElementById('boostModalTitle').textContent = isBoosted ? '⭐ Boost болиулах' : '⭐ Зарыг Boost хийх';
+            document.getElementById('boostModalDesc').textContent = isBoosted
+                ? `"${title}" зарыг featured жагсаалтаас хасах уу?`
+                : `"${title}" зарыг Featured болгон дэлгэцийн эхэнд гаргах уу?`;
+            const confirmBtn = document.getElementById('boostModalConfirm');
+            confirmBtn.textContent = isBoosted ? '❌ Болиулах' : '⭐ Boost хийх';
+            confirmBtn.className = isBoosted ? 'btn-modal-unboost' : 'btn-modal-confirm';
+            document.getElementById('boostModal').classList.add('open');
+        }
+
+        function closeBoostModal() {
+            document.getElementById('boostModal').classList.remove('open');
+            boostTargetId = null;
+            boostCurrentStatus = null;
+        }
+
+        async function confirmBoost() {
+            if (!boostTargetId) return;
+            const gz_token = localStorage.getItem('gz_token');
+            const res = await fetch(`${API_BASE}/admin/listings/${boostTargetId}/boost`, {
+                method: 'POST', headers: { 'Authorization': `Bearer ${gz_token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                showToast(data.boosted ? '⭐ Boost хийгдлээ!' : 'Boost болиулагдлаа');
+                closeBoostModal();
+                checkAuth();
+            } else {
+                alert('Алдаа гарлаа');
+            }
+        }
+
+        // Close modal on overlay click
+        document.getElementById('boostModal').addEventListener('click', function(e) {
+            if (e.target === this) closeBoostModal();
+        });
+
+        // ── TOAST ───────────────────────────────────────────────
+        function showToast(msg) {
+            let t = document.getElementById('adminToast');
+            if (!t) {
+                t = document.createElement('div');
+                t.id = 'adminToast';
+                t.style.cssText = `
+                    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+                    background:#1a1e23; color:white; padding:12px 24px; border-radius:30px;
+                    font-size:14px; font-weight:600; z-index:99999;
+                    box-shadow:0 8px 24px rgba(0,0,0,0.25); transition:opacity 0.3s;
+                `;
+                document.body.appendChild(t);
+            }
+            t.textContent = msg;
+            t.style.opacity = '1';
+            clearTimeout(t._timer);
+            t._timer = setTimeout(() => { t.style.opacity = '0'; }, 2500);
+        }
+
+        // ── HELPERS ─────────────────────────────────────────────
+        function escHtml(str) {
+            if (str == null) return '—';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+
+        function formatPrice(price) {
+            if (!price) return '—';
+            if (price >= 1_000_000_000) return (price / 1_000_000_000).toFixed(price % 1_000_000_000 === 0 ? 0 : 1) + ' тэрбум ₮';
+            if (price >= 1_000_000)     return (price / 1_000_000).toFixed(price % 1_000_000 === 0 ? 0 : 1) + ' сая ₮';
+            return price.toLocaleString() + ' ₮';
+        }
+
+        // ── INIT ─────────────────────────────────────────────────
         checkAuth();
-        setInterval(checkAuth, 15000); // Refresh every 15s for near-real-time updates
+        setInterval(checkAuth, 20000); // Auto-refresh every 20s
     </script>
 </body>
 </html>
