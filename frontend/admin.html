@@ -112,7 +112,6 @@
                     document.getElementById('loginView').style.display = 'none';
                     document.getElementById('adminView').style.display = 'block';
                     renderAdmin(data);
-                    fetchUsers();
                 } else {
                     alert('Админ эрхтэй нэвтэрнэ үү!');
                     logout();
@@ -208,6 +207,9 @@
                     </tr>
                 `).join('')}</tbody>
             </table>`;
+
+            // Users Table
+            renderUsers(data.users);
         }
 
         async function approveListing(id) {
@@ -240,20 +242,7 @@
             }
         }
 
-        async function fetchUsers() {
-            const gz_token = localStorage.getItem('gz_token');
-            try {
-                const res = await fetch(`${API_BASE}/admin/users`, {
-                    headers: { 'Authorization': `Bearer ${gz_token}` }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    renderUsers(data.users);
-                }
-            } catch (e) {
-                console.error("Error fetching users", e);
-            }
-        }
+
 
         function renderUsers(users) {
             const usersEl = document.getElementById('adminUsersTable');

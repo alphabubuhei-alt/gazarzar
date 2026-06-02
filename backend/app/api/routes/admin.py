@@ -55,6 +55,19 @@ def get_admin_stats(
             "rating": a.rating
         })
 
+    # 4. Users
+    users_query = db.query(User).order_by(User.id.desc()).all()
+    users_data = []
+    for u in users_query:
+        users_data.append({
+            "id": u.id,
+            "phone": u.phone,
+            "name": u.name or "—",
+            "role": u.role,
+            "listings_count": len(u.listings) if hasattr(u, 'listings') else 0,
+            "created_at": u.created_at.isoformat() if hasattr(u, 'created_at') and u.created_at else None,
+        })
+
     return {
         "total_listings": total_listings,
         "active_listings": active_listings,
@@ -63,7 +76,8 @@ def get_admin_stats(
         "total_agents": total_agents,
         "revenue_this_month": revenue_this_month,
         "listings": listings_data,
-        "agents": agents_data
+        "agents": agents_data,
+        "users": users_data
     }
 
 @router.post("/listings/{id}/approve")
