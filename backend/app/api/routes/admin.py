@@ -109,3 +109,23 @@ def toggle_boost(
         boosted = True
     db.commit()
     return {"boosted": boosted, "boost_status": listing.boost_status.value}
+
+
+@router.get("/users")
+def get_users(
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_current_admin_user)
+):
+    """Бүртгэлтэй хэрэглэгчдийн жагсаалт"""
+    users = db.query(User).order_by(User.id.desc()).all()
+    result = []
+    for u in users:
+        result.append({
+            "id": u.id,
+            "phone": u.phone,
+            "name": u.name or "—",
+            "role": u.role,
+            "listings_count": len(u.listings) if hasattr(u, 'listings') else 0,
+            "created_at": u.created_at.isoformat() if hasattr(u, 'created_at') and u.created_at else None,
+        })
+    return {"users": result, "total": len(result)}

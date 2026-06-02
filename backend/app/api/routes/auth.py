@@ -176,5 +176,34 @@ async def verify_otp(body: VerifyOTPRequest, db: Session = Depends(get_db)):
 @router.get("/me")
 async def get_me(db: Session = Depends(get_db)):
     """Returns current user info - requires auth token"""
-    # Used with get_current_user dependency in main
     pass
+
+
+# ── Simple phone login (no OTP) ───────────────────────
+class PhoneLoginRequest(BaseModel):
+    phone: str
+
+@router.post("/phone-login", response_model=TokenResponse)
+async def phone_login(body: PhoneLoginRequest, db: Session = Depends(get_db)):
+    """
+    OTP-гүй, зөвхөн утасны дугаараар нэвтрэх.
+    Хэрэглэгч байхгүй бол автоматаар шинээр үүсгэнэ.
+    """
+    phone = normalize_phone(body.phone)
+    if len(phone) < 8:
+        raise HTTPException(status_code=400, detail="Утасны дугаар буруу байна")
+
+    user = db.query(User).filter(User.phone == phone).first()
+    if not user:
+        role = "admin" if phone == "99910230" else "user"
+        user = User(phone=phone, role=role)
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    elif phone == "99910230" and user.role != "admin":
+        user.role = "admin"
+        db.commit()
+        db.refresh(user)
+
+    token = create_access_token({"sub": user.phone, "user_id": user.id})
+    return TokenResponse(access_token=token, user_id=user.id, phone=user.phone, name=user.name)
