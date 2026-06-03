@@ -1048,8 +1048,9 @@
                 </div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
                     <div class="form-group">
-                        <label>Үнэ (сая ₮)</label>
-                        <input type="number" id="postPrice" placeholder="350">
+                        <label>Үнэ (₮)</label>
+                        <input type="number" id="postPrice" placeholder="Жишээ: 12000000">
+                        <div id="postPriceHint" style="font-size:11px; color:var(--primary); font-weight:700; margin-top:4px; min-height:15px; line-height:1.2;"></div>
                     </div>
                     <div class="form-group">
                         <label>Талбай (м²)</label>
@@ -1734,6 +1735,8 @@
         // Reset form input values
         document.getElementById('postTitle').value = '';
         document.getElementById('postPrice').value = '';
+        const priceHint = document.getElementById('postPriceHint');
+        if (priceHint) priceHint.innerText = '';
         document.getElementById('postArea').value = '';
         document.getElementById('postDesc').value = '';
         document.getElementById('postAddressSearch').value = '';
@@ -1897,7 +1900,7 @@
             showToast('Зар хадгалж байна...');
 
             const token = localStorage.getItem('gz_token');
-            const priceVal = parseFloat(price) * 1_000_000;
+            const priceVal = parseFloat(price);
 
             // 1. Create listing in backend
             const listingResp = await fetch(`${API_BASE}/listings/`, {
@@ -2868,6 +2871,29 @@
         return Number(p).toLocaleString() + ' ₮';
     }
 
+    window.formatPriceToWords = function(val) {
+        if (!val || isNaN(val)) return '';
+        const num = parseFloat(val);
+        if (num <= 0) return '';
+        
+        const formattedNum = num.toLocaleString('mn-MN') + ' ₮';
+        
+        let wordStr = '';
+        if (num >= 1e12) {
+            wordStr = (num / 1e12).toFixed(2).replace(/\.00$/, '').replace(/\.0$/, '') + ' их наяд ₮';
+        } else if (num >= 1e9) {
+            wordStr = (num / 1e9).toFixed(2).replace(/\.00$/, '').replace(/\.0$/, '') + ' тэрбум ₮';
+        } else if (num >= 1e6) {
+            wordStr = (num / 1e6).toFixed(2).replace(/\.00$/, '').replace(/\.0$/, '') + ' сая ₮';
+        } else if (num >= 1e3) {
+            wordStr = (num / 1e3).toFixed(2).replace(/\.00$/, '').replace(/\.0$/, '') + ' мянга ₮';
+        } else {
+            wordStr = num + ' ₮';
+        }
+        
+        return `${formattedNum} (${wordStr})`;
+    };
+
     window.renderAdminDashboard = function() {
         const allListings = allBackendListings.map(p => ({
             ...p,
@@ -3195,6 +3221,16 @@
         fetchAgents();
         checkAuth();
         setTimeout(() => lucide.createIcons(), 500);
+
+        const postPrice = document.getElementById('postPrice');
+        if (postPrice) {
+            postPrice.addEventListener('input', function(e) {
+                const hint = document.getElementById('postPriceHint');
+                if (hint) {
+                    hint.innerText = window.formatPriceToWords(e.target.value);
+                }
+            });
+        }
     };
 
 </script>
