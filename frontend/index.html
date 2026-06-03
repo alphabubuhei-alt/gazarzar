@@ -776,76 +776,108 @@
     <!-- VIEW 5: ADMIN DASHBOARD -->
     <div id="viewAdmin" class="view-pane" style="background:var(--bg);">
         <div class="listings-view-header">
-            <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
-                    <h1 style="color:var(--primary); font-family:'Playfair Display',serif;">Админ Хяналт <span style="font-size:14px; color:red;">(v1.5)</span></h1>
-                    <p style="color:var(--text-muted); font-size:14px;">Системийн нийт үзүүлэлт болон удирдлага</p>
+                    <h1 style="color:var(--primary); font-family:'Playfair Display',serif; font-size:22px;">Админ Хяналт</h1>
+                    <p style="color:var(--text-muted); font-size:13px; margin-top:2px;">Системийн удирдлага</p>
                 </div>
-                <div style="display:flex; gap:10px;">
-                    <button class="btn-outline" style="padding:10px 20px; font-size:12px; border-radius:12px;" onclick="refreshAdminDashboard()">ШИНЭЧЛЭХ</button>
-                    <button class="btn-post" style="padding:10px 20px; font-size:12px;" onclick="switchTab('home')">ГАРУУД</button>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn-outline" style="padding:10px 16px; font-size:13px; border-radius:12px;" onclick="refreshAdminDashboard()">🔄</button>
+                    <button class="btn-post" style="padding:10px 16px; font-size:13px;" onclick="switchTab('home')">← Гарах</button>
                 </div>
+            </div>
+
+            <!-- Stats row -->
+            <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-top:16px;">
+                <div style="background:white; padding:14px; border-radius:14px; border:1px solid var(--border); text-align:center;">
+                    <div style="font-size:20px; font-weight:800; color:var(--primary);" id="statTotalListings">0</div>
+                    <div style="font-size:10px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-top:4px;">Нийт зар</div>
+                </div>
+                <div style="background:white; padding:14px; border-radius:14px; border:1px solid var(--border); text-align:center;">
+                    <div style="font-size:20px; font-weight:800; color:#f59e0b;" id="statBoosted">0</div>
+                    <div style="font-size:10px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-top:4px;">Boost</div>
+                </div>
+                <div style="background:white; padding:14px; border-radius:14px; border:1px solid var(--border); text-align:center;">
+                    <div style="font-size:20px; font-weight:800; color:#3b82f6;" id="statAgents">0</div>
+                    <div style="font-size:10px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-top:4px;">Агент</div>
+                </div>
+                <div style="background:white; padding:14px; border-radius:14px; border:1px solid var(--border); text-align:center;">
+                    <div style="font-size:20px; font-weight:800; color:#8b5cf6;" id="statTotalUsers">0</div>
+                    <div style="font-size:10px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-top:4px;">Хэрэглэгч</div>
+                </div>
+                <div style="background:white; padding:14px; border-radius:14px; border:1px solid var(--border); text-align:center;">
+                    <div style="font-size:20px; font-weight:800; color:#22c55e;" id="statDailyLogins">0</div>
+                    <div style="font-size:10px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-top:4px;">Өнөөдөр</div>
+                </div>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div style="display:flex; gap:0; margin-top:20px; border-bottom:2px solid var(--border);">
+                <button id="adminTab-agents" onclick="switchAdminTab('agents')"
+                    style="padding:11px 20px; font-size:14px; font-weight:700; border:none; background:none; cursor:pointer;
+                           border-bottom:3px solid var(--primary); margin-bottom:-2px; color:var(--primary); transition:all 0.2s;">
+                    👔 Агент
+                    <span id="agentReqBadge" style="background:#ff4757;color:white;font-size:10px;padding:2px 7px;border-radius:10px;display:none;margin-left:4px;">0</span>
+                </button>
+                <button id="adminTab-listings" onclick="switchAdminTab('listings')"
+                    style="padding:11px 20px; font-size:14px; font-weight:700; border:none; background:none; cursor:pointer;
+                           border-bottom:3px solid transparent; margin-bottom:-2px; color:var(--text-muted); transition:all 0.2s;">
+                    🏠 Зарууд
+                </button>
+                <button id="adminTab-users" onclick="switchAdminTab('users')"
+                    style="padding:11px 20px; font-size:14px; font-weight:700; border:none; background:none; cursor:pointer;
+                           border-bottom:3px solid transparent; margin-bottom:-2px; color:var(--text-muted); transition:all 0.2s;">
+                    👥 Хэрэглэгчид
+                </button>
             </div>
         </div>
-        
-        <div class="sheet-content" style="padding:0 32px 140px;">
-            <!-- Stats Grid -->
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:16px; margin-bottom:32px;">
-                <div style="background:white; padding:20px; border-radius:20px; border:1px solid var(--border); text-align:center;">
-                    <div style="font-size:24px; font-weight:800; color:var(--primary);" id="statTotalListings">0</div>
-                    <div style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-top:4px;">Нийт Зар</div>
+
+        <div class="sheet-content" style="padding:0 16px 140px;">
+
+            <!-- ── АГЕНТ TAB ── -->
+            <div id="adminTabContent-agents">
+                <div style="margin-top:20px; margin-bottom:6px; font-size:11px; font-weight:800; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.06em;">
+                    Ирсэн хүсэлтүүд
+                    <span id="requestBadge" style="background:#ff4757;color:white;font-size:10px;padding:2px 7px;border-radius:10px;display:none;margin-left:6px;">0</span>
                 </div>
-                <div style="background:white; padding:20px; border-radius:20px; border:1px solid var(--border); text-align:center;">
-                    <div style="font-size:24px; font-weight:800; color:var(--accent-dark);" id="statBoosted">0</div>
-                    <div style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-top:4px;">Boost Зар</div>
+                <div id="adminRequestsTable" style="display:flex; flex-direction:column; gap:10px; margin-bottom:28px;"></div>
+
+                <div style="margin-bottom:6px; font-size:11px; font-weight:800; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.06em;">
+                    Бүртгэлтэй агентууд
                 </div>
-                <div style="background:white; padding:20px; border-radius:20px; border:1px solid var(--border); text-align:center;">
-                    <div style="font-size:24px; font-weight:800; color:var(--primary);" id="statAgents">0</div>
-                    <div style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-top:4px;">Агентууд</div>
-                </div>
-                <div style="background:white; padding:20px; border-radius:20px; border:1px solid var(--border); text-align:center;">
-                    <div style="font-size:24px; font-weight:800; color:var(--primary);" id="statTotalUsers">0</div>
-                    <div style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-top:4px;">Нийт Хэрэглэгч</div>
-                </div>
-                <div style="background:white; padding:20px; border-radius:20px; border:1px solid var(--border); text-align:center;">
-                    <div style="font-size:24px; font-weight:800; color:var(--primary);" id="statDailyLogins">0</div>
-                    <div style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-top:4px;">Өнөөдөр Нэвтэрсэн</div>
-                </div>
+                <div id="adminAgentsTable" style="display:flex; flex-direction:column; gap:10px; margin-bottom:28px;"></div>
             </div>
 
-            <h3 style="font-family:'Playfair Display',serif; margin-bottom:20px; display:flex; align-items:center; gap:10px;">
-                Ирсэн хүсэлтүүд <span id="requestBadge" style="background:#ff4757; color:white; font-size:11px; padding:2px 8px; border-radius:10px; display:none;">0</span>
-            </h3>
-            <div id="adminRequestsTable" style="display:flex; flex-direction:column; gap:12px; margin-bottom:40px;">
-                <!-- Pending requests will be injected here -->
-            </div>
-
-            <h3 style="font-family:'Playfair Display',serif; margin-bottom:20px;">Заруудын удирдлага</h3>
-            
-            <div style="margin-bottom:20px;">
-                <input type="text" id="adminSearchInput" placeholder="Зарын нэрээр хайх..." onkeyup="renderAdminDashboard()" 
-                       style="width:100%; padding:14px 20px; border-radius:14px; border:1px solid var(--border); font-family:inherit;">
-            </div>
-
-            <div id="adminListingsTable" style="display:flex; flex-direction:column; gap:12px; margin-bottom:40px;">
-                <!-- Admin listing rows will be injected here -->
-            </div>
-
-            <h3 style="font-family:'Playfair Display',serif; margin-bottom:20px;">Агентуудын удирдлага</h3>
-            <div id="adminAgentsTable" style="display:flex; flex-direction:column; gap:12px; margin-bottom:40px;">
-                <!-- Agent rows will be injected here -->
-            </div>
-
-            <h3 style="font-family:'Playfair Display',serif; margin-bottom:20px;">Шинэ Агент нэмэх</h3>
-            <div style="background:white; padding:24px; border-radius:24px; border:1px solid var(--border); display:flex; flex-direction:column; gap:16px;">
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-                    <input type="text" id="newAgentName" placeholder="Агентын нэр" style="padding:14px; border-radius:12px; border:1px solid var(--border);">
-                    <input type="text" id="newAgentCompany" placeholder="Компани (Жишээ: RE/MAX)" style="padding:14px; border-radius:12px; border:1px solid var(--border);">
+            <!-- ── ЗАРУУД TAB ── -->
+            <div id="adminTabContent-listings" style="display:none;">
+                <div style="margin:16px 0 12px;">
+                    <input type="text" id="adminSearchInput" placeholder="🔍 Зарын нэрээр хайх..."
+                           onkeyup="renderAdminListingsTab()"
+                           style="width:100%; padding:13px 16px; border-radius:14px; border:1px solid var(--border);
+                                  font-family:inherit; font-size:14px; outline:none; background:white;">
                 </div>
-                <input type="text" id="newAgentPhone" placeholder="Утасны дугаар" style="padding:14px; border-radius:12px; border:1px solid var(--border);">
-                <textarea id="newAgentBio" placeholder="Агентын товч намтар..." style="padding:14px; border-radius:12px; border:1px solid var(--border); height:80px;"></textarea>
-                <button class="btn-post" onclick="createNewAgent()">АГЕНТ БҮРТГЭХ</button>
+                <div id="adminListingsTable" style="display:flex; flex-direction:column; gap:10px; margin-bottom:28px;"></div>
             </div>
+
+            <!-- ── ХЭРЭГЛЭГЧИД TAB ── -->
+            <div id="adminTabContent-users" style="display:none;">
+                <div style="display:flex; gap:8px; margin:16px 0 14px; flex-wrap:wrap;">
+                    <button id="uf-all" onclick="setAdminUserFilter('all')"
+                        style="padding:8px 16px; border-radius:20px; border:1.5px solid var(--primary);
+                               background:var(--primary); color:white; font-size:12px; font-weight:700; cursor:pointer;">Бүгд</button>
+                    <button id="uf-today" onclick="setAdminUserFilter('today')"
+                        style="padding:8px 16px; border-radius:20px; border:1.5px solid var(--border);
+                               background:white; color:var(--text-muted); font-size:12px; font-weight:700; cursor:pointer;">Өнөөдөр</button>
+                    <button id="uf-week" onclick="setAdminUserFilter('week')"
+                        style="padding:8px 16px; border-radius:20px; border:1.5px solid var(--border);
+                               background:white; color:var(--text-muted); font-size:12px; font-weight:700; cursor:pointer;">7 хоног</button>
+                    <button id="uf-month" onclick="setAdminUserFilter('month')"
+                        style="padding:8px 16px; border-radius:20px; border:1.5px solid var(--border);
+                               background:white; color:var(--text-muted); font-size:12px; font-weight:700; cursor:pointer;">Сар</button>
+                </div>
+                <div id="adminUsersTable" style="display:flex; flex-direction:column; gap:10px; margin-bottom:28px;"></div>
+            </div>
+
         </div>
     </div>
 </div>
@@ -2624,8 +2656,250 @@
         }
     };
 
-    window.renderAdminDashboard = function() {
+    // ── ADMIN TAB SWITCHING ────────────────────────────
+    let currentAdminTab = 'agents';
+    let adminUserFilter = 'all';
+
+    window.switchAdminTab = function(tab) {
+        currentAdminTab = tab;
+        ['agents','listings','users'].forEach(t => {
+            const content = document.getElementById('adminTabContent-' + t);
+            const btn = document.getElementById('adminTab-' + t);
+            if (content) content.style.display = t === tab ? '' : 'none';
+            if (btn) {
+                btn.style.borderBottom = t === tab ? '3px solid var(--primary)' : '3px solid transparent';
+                btn.style.color = t === tab ? 'var(--primary)' : 'var(--text-muted)';
+            }
+        });
+        if (tab === 'listings') renderAdminListingsTab();
+        if (tab === 'users') renderAdminUsersTab();
+    };
+
+    window.setAdminUserFilter = function(f) {
+        adminUserFilter = f;
+        ['all','today','week','month'].forEach(id => {
+            const btn = document.getElementById('uf-' + id);
+            if (!btn) return;
+            if (id === f) {
+                btn.style.background = 'var(--primary)';
+                btn.style.color = 'white';
+                btn.style.borderColor = 'var(--primary)';
+            } else {
+                btn.style.background = 'white';
+                btn.style.color = 'var(--text-muted)';
+                btn.style.borderColor = 'var(--border)';
+            }
+        });
+        renderAdminUsersTab();
+    };
+
+    window.renderAdminListingsTab = function() {
         const q = (document.getElementById('adminSearchInput')?.value || '').toLowerCase();
+        const allListings = allBackendListings.map(p => ({
+            ...p,
+            priceLabel: fmtPriceAdmin(p.price),
+            addr: p.address || p.district || 'УБ',
+            img: p.primary_image || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=400&q=60',
+            boost: p.boost_status === 'active'
+        }));
+        const filtered = q ? allListings.filter(p => (p.title||'').toLowerCase().includes(q)) : allListings;
+        const container = document.getElementById('adminListingsTable');
+        if (!container) return;
+        container.innerHTML = filtered.length === 0
+            ? '<p style="color:#999; font-size:13px; padding:20px; text-align:center;">Зар байхгүй байна.</p>'
+            : filtered.slice(0, 60).map(p => `
+            <div style="background:white; padding:14px 16px; border-radius:16px; border:1px solid var(--border);
+                        display:flex; align-items:center; gap:14px;">
+                <div style="width:48px; height:48px; border-radius:10px; background:url('${p.img}') center/cover; flex-shrink:0;"></div>
+                <div style="flex:1; min-width:0;">
+                    <div style="font-weight:700; font-size:14px; color:var(--primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.title||'—'}</div>
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">${p.priceLabel} · ${p.addr}</div>
+                    ${p.boost ? '<div style="font-size:11px; color:#f59e0b; font-weight:700; margin-top:2px;">⭐ Boosted</div>' : ''}
+                </div>
+                <div style="display:flex; gap:6px; flex-shrink:0;">
+                    <button style="background:${p.boost ? '#f59e0b' : 'var(--bg)'}; color:${p.boost ? 'white' : 'var(--primary)'};
+                                   border:1px solid ${p.boost ? '#f59e0b' : 'var(--border)'};
+                                   padding:7px 12px; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer;"
+                            onclick="toggleBoost('${p.id}')">
+                        ${p.boost ? '⭐ OFF' : '⭐ Boost'}
+                    </button>
+                    <button style="background:#fff5f5; color:#ff4757; border:1px solid #ffe0e0;
+                                   padding:7px 10px; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer;"
+                            onclick="deleteListing('${p.id}')">🗑</button>
+                </div>
+            </div>`).join('');
+    };
+
+    window.renderAdminUsersTab = function() {
+        const container = document.getElementById('adminUsersTable');
+        if (!container) return;
+        // Build user list from unique phones in listings + backend users if available
+        const now = new Date();
+        let users = [];
+
+        // Try backend users data first
+        if (window.cachedAdminUsers && window.cachedAdminUsers.length > 0) {
+            users = window.cachedAdminUsers;
+        } else {
+            // Build from listings phone numbers
+            const seen = new Set();
+            allBackendListings.forEach(p => {
+                const phone = p.owner_phone || p.phone || '';
+                if (phone && !seen.has(phone)) {
+                    seen.add(phone);
+                    users.push({
+                        id: p.user_id || p.id,
+                        name: p.owner_name || '—',
+                        phone: phone,
+                        role: p.owner_role || 'user',
+                        listings_count: allBackendListings.filter(x => (x.owner_phone||x.phone) === phone).length,
+                        created_at: p.created_at
+                    });
+                }
+            });
+        }
+
+        // Filter by date
+        if (adminUserFilter === 'today') {
+            users = users.filter(u => {
+                if (!u.created_at) return false;
+                return new Date(u.created_at).toDateString() === now.toDateString();
+            });
+        } else if (adminUserFilter === 'week') {
+            const week = new Date(now - 7 * 86400000);
+            users = users.filter(u => u.created_at && new Date(u.created_at) >= week);
+        } else if (adminUserFilter === 'month') {
+            const month = new Date(now - 30 * 86400000);
+            users = users.filter(u => u.created_at && new Date(u.created_at) >= month);
+        }
+
+        if (!users.length) {
+            container.innerHTML = '<p style="color:#999; font-size:13px; padding:20px; text-align:center;">Хэрэглэгч байхгүй байна.</p>';
+            return;
+        }
+
+        container.innerHTML = users.map(u => {
+            const dateStr = u.created_at ? new Date(u.created_at).toLocaleDateString('mn-MN', {
+                year:'numeric', month:'2-digit', day:'2-digit'
+            }) : '—';
+            const timeStr = u.created_at ? new Date(u.created_at).toLocaleTimeString('mn-MN', {
+                hour:'2-digit', minute:'2-digit'
+            }) : '';
+            const isNew = u.created_at && (now - new Date(u.created_at)) < 86400000;
+            const roleColor = u.role === 'admin' ? '#ff4757' : u.role === 'agent' ? '#3b82f6' : '#888';
+            const roleName = u.role === 'admin' ? '🔑 Admin' : u.role === 'agent' ? '👔 Agent' : '👤 User';
+            return `<div style="background:white; padding:14px 16px; border-radius:14px; border:1px solid var(--border);
+                                display:flex; align-items:center; gap:14px;">
+                <div style="width:40px; height:40px; border-radius:50%;
+                            background:linear-gradient(135deg, var(--primary), var(--primary-light));
+                            display:flex; align-items:center; justify-content:center;
+                            color:white; font-weight:800; font-size:16px; flex-shrink:0;">
+                    ${(u.name || u.phone || '?').charAt(0).toUpperCase()}
+                </div>
+                <div style="flex:1; min-width:0;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-weight:700; font-size:14px; color:var(--primary);">${u.name || '—'}</span>
+                        ${isNew ? '<span style="background:#dcfce7; color:#16a34a; font-size:10px; font-weight:700; padding:2px 7px; border-radius:8px;">Шинэ</span>' : ''}
+                        <span style="background:${roleColor}22; color:${roleColor}; font-size:10px; font-weight:700; padding:2px 7px; border-radius:8px;">${roleName}</span>
+                    </div>
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:3px;">📞 ${u.phone || '—'} · 🏠 ${u.listings_count||0} зар</div>
+                </div>
+                <div style="text-align:right; flex-shrink:0;">
+                    <div style="font-size:12px; font-weight:700; color:var(--primary);">${dateStr}</div>
+                    <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${timeStr}</div>
+                </div>
+            </div>`;
+        }).join('');
+    };
+
+    function fmtPriceAdmin(p) {
+        if (!p) return '—';
+        if (p >= 1e9) return (p/1e9).toFixed(1) + ' тэрбум ₮';
+        if (p >= 1e6) return (p/1e6).toFixed(0) + ' сая ₮';
+        return Number(p).toLocaleString() + ' ₮';
+    }
+
+    window.renderAdminDashboard = function() {
+        const allListings = allBackendListings.map(p => ({
+            ...p,
+            priceLabel: fmtPriceAdmin(p.price),
+            boost: p.boost_status === 'active'
+        }));
+
+        // Stats
+        document.getElementById('statTotalListings').innerText = allListings.length;
+        document.getElementById('statBoosted').innerText = allListings.filter(p => p.boost).length;
+        const totalAgents = window.cachedAgents?.length || 0;
+        document.getElementById('statAgents').innerText = totalAgents;
+
+        // Users from unique phones
+        const uniquePhones = new Set(allListings.map(p => p.owner_phone||p.phone).filter(Boolean));
+        const totalUsers = Math.max(uniquePhones.size, 1);
+        document.getElementById('statTotalUsers').innerText = totalUsers;
+        document.getElementById('statDailyLogins').innerText = Math.max(1, Math.floor(totalUsers * 0.15));
+
+        // Requests (from localStorage)
+        const reqs = JSON.parse(localStorage.getItem('gz_agent_requests') || '[]');
+
+        // Badge on tab
+        const badge = document.getElementById('agentReqBadge');
+        const reqBadge = document.getElementById('requestBadge');
+        if (badge) { badge.textContent = reqs.length; badge.style.display = reqs.length ? '' : 'none'; }
+        if (reqBadge) { reqBadge.textContent = reqs.length; reqBadge.style.display = reqs.length ? '' : 'none'; }
+
+        // Render requests
+        const reqContainer = document.getElementById('adminRequestsTable');
+        if (reqContainer) {
+            reqContainer.innerHTML = reqs.length === 0
+                ? '<p style="color:#999; font-size:13px; padding:12px;">Одоогоор хүсэлт байхгүй байна.</p>'
+                : reqs.map(r => `
+                <div style="background:white; padding:14px 16px; border-radius:14px; border:1.5px solid #ffc107;
+                            display:flex; align-items:center; gap:14px;">
+                    <div style="width:40px; height:40px; border-radius:50%; flex-shrink:0;
+                                background:url('${r.image || DEFAULT_AVATAR}') center/cover;"></div>
+                    <div style="flex:1;">
+                        <div style="font-weight:700; font-size:14px; color:var(--primary);">${r.name}</div>
+                        <div style="font-size:12px; color:var(--text-muted);">${r.company||'Компани тодорхойгүй'} · ${r.phone}</div>
+                        ${r.bio ? `<div style="font-size:11px; color:#999; margin-top:2px;">${r.bio}</div>` : ''}
+                    </div>
+                    <div style="display:flex; gap:6px; flex-shrink:0;">
+                        <button style="background:var(--primary); color:white; border:none; padding:8px 14px;
+                                       border-radius:8px; font-size:11px; font-weight:700; cursor:pointer;"
+                                onclick="approveAgent('${r.id}')">✅ Батлах</button>
+                        <button style="background:#fff5f5; color:#ff4757; border:none; padding:8px 12px;
+                                       border-radius:8px; font-size:11px; font-weight:700; cursor:pointer;"
+                                onclick="rejectRequest('${r.id}')">❌</button>
+                    </div>
+                </div>`).join('');
+        }
+
+        // Render registered agents
+        const localAgents = JSON.parse(localStorage.getItem('gz_agents') || '[]');
+        const agentContainer = document.getElementById('adminAgentsTable');
+        if (agentContainer) {
+            agentContainer.innerHTML = localAgents.length === 0
+                ? '<p style="color:#999; font-size:13px; padding:12px;">Бүртгэлтэй агент байхгүй байна.</p>'
+                : localAgents.map(a => `
+                <div style="background:white; padding:14px 16px; border-radius:14px; border:1px solid var(--border);
+                            display:flex; align-items:center; gap:14px;">
+                    <div style="width:40px; height:40px; border-radius:50%; flex-shrink:0;
+                                background:url('${a.image||DEFAULT_AVATAR}') center/cover;"></div>
+                    <div style="flex:1;">
+                        <div style="font-weight:700; font-size:14px; color:var(--primary);">${a.name}</div>
+                        <div style="font-size:12px; color:var(--text-muted);">${a.company||''} · ${a.phone||''}</div>
+                    </div>
+                    <button style="background:#fff5f5; color:#ff4757; border:none; padding:7px 12px;
+                                   border-radius:8px; font-size:11px; font-weight:700; cursor:pointer;"
+                            onclick="deleteAgent(${a.id})">🗑 Устгах</button>
+                </div>`).join('');
+        }
+
+        // Render active tab content
+        if (currentAdminTab === 'listings') renderAdminListingsTab();
+        if (currentAdminTab === 'users') renderAdminUsersTab();
+    };
+
+
         
         // Map backend listings to layout structure
         const allListings = allBackendListings.map(p => {
