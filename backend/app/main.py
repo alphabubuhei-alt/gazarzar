@@ -40,8 +40,9 @@ app.include_router(payments.router, prefix="/api")
 app.include_router(admin.router,    prefix="/api")
 
 # ── Static files (uploaded images) ───────────────────
-os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+upload_dir = settings.UPLOAD_DIR
+os.makedirs(upload_dir, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=upload_dir), name="uploads")
 
 # ── Serve frontend ────────────────────────────────────
 from fastapi.responses import FileResponse

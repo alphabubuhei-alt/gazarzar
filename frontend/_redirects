@@ -1,2 +1,1 @@
-/api/*  https://gazarzar.onrender.com/api/:splat  200
-/uploads/*  https://gazarzar.onrender.com/uploads/:splat  200
+/uploads/*  https://gazarzar.onrender.com/uploads/:splat  302
