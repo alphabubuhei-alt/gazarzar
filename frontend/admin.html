@@ -3,530 +3,986 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GazarZar - Admin Dashboard</title>
+    <title>GazarZar — Admin Panel</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root { 
-            --primary: #2d5a27;
-            --primary-light: #e8f5e9;
-            --danger: #c62828;
-            --danger-light: #ffebee;
-            --warning: #856404;
-            --warning-light: #fff3cd;
-            --info: #0d47a1;
-            --info-light: #e3f2fd;
-            --boost: #f59e0b;
-            --boost-light: #fffde7;
-            --bg: #f4f7f6;
-            --text-main: #1a1e23;
-            --card-shadow: 0 2px 12px rgba(0,0,0,0.07);
+        :root {
+            --sidebar-w: 240px;
+            --bg: #0f1117;
+            --sidebar: #16181f;
+            --card: #1e2130;
+            --card2: #252836;
+            --border: rgba(255,255,255,0.06);
+            --accent: #6c63ff;
+            --accent2: #4f46e5;
+            --green: #22c55e;
+            --yellow: #f59e0b;
+            --red: #ef4444;
+            --blue: #3b82f6;
+            --text: #f1f5f9;
+            --muted: #64748b;
+            --muted2: #94a3b8;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
-        body { background-color: var(--bg); color: var(--text-main); }
-        
-        /* LOGIN */
-        .login-container { display: flex; height: 100vh; align-items: center; justify-content: center; }
-        .login-card {
-            background: white; padding: 40px; border-radius: 20px; 
-            box-shadow: 0 10px 40px rgba(0,0,0,0.12); width: 400px; text-align: center;
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Inter',sans-serif; }
+        body { background:var(--bg); color:var(--text); min-height:100vh; }
+
+        /* ── LOGIN ── */
+        #loginView {
+            display:flex; align-items:center; justify-content:center;
+            min-height:100vh; background:var(--bg);
         }
-        .login-card h2 { margin-bottom: 8px; font-size: 24px; font-weight: 800; }
-        .login-card p { color: #666; margin-bottom: 28px; font-size: 14px; }
-        .login-card input { 
-            width: 100%; padding: 13px 16px; margin-bottom: 16px; 
-            border: 1.5px solid #e0e0e0; border-radius: 10px; font-size: 15px; outline: none;
-            transition: border-color 0.2s;
+        .login-box {
+            background:var(--card); border:1px solid var(--border);
+            border-radius:20px; padding:48px 40px; width:380px;
+            text-align:center; box-shadow:0 24px 80px rgba(0,0,0,0.5);
         }
-        .login-card input:focus { border-color: var(--primary); }
-        .login-card button { 
-            width: 100%; padding: 14px; background: var(--primary); color: white; 
-            border: none; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 15px;
-            transition: opacity 0.2s;
+        .login-logo {
+            width:56px; height:56px; background:linear-gradient(135deg,var(--accent),var(--accent2));
+            border-radius:16px; margin:0 auto 20px; display:flex; align-items:center;
+            justify-content:center; font-size:26px;
         }
-        .login-card button:hover { opacity: 0.88; }
-        
-        /* ADMIN VIEW */
-        #adminView { display: none; padding: 32px 40px; max-width: 1280px; margin: 0 auto; }
-        
-        .header { 
-            display: flex; justify-content: space-between; align-items: center; 
-            margin-bottom: 28px; flex-wrap: wrap; gap: 12px;
+        .login-box h2 { font-size:22px; font-weight:800; margin-bottom:6px; }
+        .login-box p { color:var(--muted); font-size:13px; margin-bottom:28px; }
+        .login-box input {
+            width:100%; padding:13px 16px; margin-bottom:14px;
+            background:var(--card2); border:1.5px solid var(--border);
+            border-radius:12px; font-size:15px; color:var(--text); outline:none;
+            transition:border-color 0.2s;
         }
-        .header h2 { font-size: 26px; font-weight: 800; }
-        .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-        
-        .btn-header { 
-            padding: 7px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; 
-            cursor: pointer; border: none; transition: opacity 0.2s; text-decoration: none;
-            display: inline-flex; align-items: center; gap: 5px;
+        .login-box input:focus { border-color:var(--accent); }
+        .login-box button {
+            width:100%; padding:14px; background:var(--accent);
+            color:white; border:none; border-radius:12px; font-weight:700;
+            font-size:15px; cursor:pointer; transition:opacity 0.2s;
         }
-        .btn-header:hover { opacity: 0.8; }
-        .btn-refresh { background: var(--primary-light); color: var(--primary); border: 1px solid #c8e6c9; }
-        .btn-site { background: white; color: var(--primary); border: 1px solid #c8e6c9; }
-        .btn-logout { background: none; border: none; color: var(--danger); font-weight: 600; cursor: pointer; font-size: 13px; }
-        .status-badge { 
-            background: var(--primary-light); color: var(--primary); 
-            padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700;
+        .login-box button:hover { opacity:0.88; }
+
+        /* ── APP SHELL ── */
+        #appView { display:none; }
+
+        /* ── SIDEBAR ── */
+        .sidebar {
+            position:fixed; left:0; top:0; bottom:0; width:var(--sidebar-w);
+            background:var(--sidebar); border-right:1px solid var(--border);
+            display:flex; flex-direction:column; z-index:100;
+        }
+        .sidebar-logo {
+            padding:24px 20px 20px;
+            border-bottom:1px solid var(--border);
+        }
+        .sidebar-logo .logo-mark {
+            display:flex; align-items:center; gap:10px; text-decoration:none;
+        }
+        .logo-icon {
+            width:36px; height:36px;
+            background:linear-gradient(135deg,var(--accent),#a855f7);
+            border-radius:10px; display:flex; align-items:center;
+            justify-content:center; font-size:18px; flex-shrink:0;
+        }
+        .logo-text { font-weight:800; font-size:16px; color:var(--text); }
+        .logo-sub { font-size:10px; color:var(--muted); font-weight:500; }
+
+        .sidebar-nav { flex:1; padding:16px 12px; overflow-y:auto; }
+        .nav-label {
+            font-size:10px; font-weight:700; color:var(--muted);
+            text-transform:uppercase; letter-spacing:0.08em;
+            padding:0 8px; margin:16px 0 6px;
+        }
+        .nav-item {
+            display:flex; align-items:center; gap:10px;
+            padding:10px 12px; border-radius:10px; cursor:pointer;
+            color:var(--muted2); font-size:14px; font-weight:500;
+            transition:all 0.15s; margin-bottom:2px;
+            border:none; background:none; width:100%; text-align:left;
+        }
+        .nav-item:hover { background:rgba(255,255,255,0.05); color:var(--text); }
+        .nav-item.active {
+            background:rgba(108,99,255,0.15); color:var(--accent);
+            font-weight:700;
+        }
+        .nav-icon { font-size:18px; width:22px; text-align:center; flex-shrink:0; }
+        .nav-badge {
+            margin-left:auto; background:var(--red); color:white;
+            font-size:10px; font-weight:800; padding:2px 7px;
+            border-radius:20px; min-width:20px; text-align:center;
+        }
+        .nav-badge.yellow { background:var(--yellow); }
+        .nav-badge.green { background:var(--green); }
+
+        .sidebar-footer {
+            padding:16px 12px;
+            border-top:1px solid var(--border);
+        }
+        .user-info {
+            display:flex; align-items:center; gap:10px;
+            padding:10px 12px; border-radius:10px;
+            background:rgba(255,255,255,0.04);
+        }
+        .user-avatar {
+            width:32px; height:32px; border-radius:8px;
+            background:linear-gradient(135deg,var(--accent),#a855f7);
+            display:flex; align-items:center; justify-content:center;
+            font-size:14px; flex-shrink:0;
+        }
+        .user-name { font-size:13px; font-weight:600; }
+        .user-role { font-size:11px; color:var(--muted); }
+        .btn-logout {
+            margin-left:auto; background:none; border:none;
+            color:var(--muted); cursor:pointer; font-size:16px;
+            transition:color 0.2s; padding:4px;
+        }
+        .btn-logout:hover { color:var(--red); }
+
+        /* ── MAIN CONTENT ── */
+        .main {
+            margin-left:var(--sidebar-w);
+            min-height:100vh; padding:32px;
         }
 
-        /* STATS */
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; margin-bottom: 28px; }
-        .stat-card { 
-            background: white; border-radius: 14px; padding: 20px; 
-            box-shadow: var(--card-shadow); transition: transform 0.2s;
+        /* ── TOP BAR ── */
+        .topbar {
+            display:flex; align-items:center; justify-content:space-between;
+            margin-bottom:28px;
         }
-        .stat-card:hover { transform: translateY(-2px); }
-        .stat-icon { font-size: 26px; margin-bottom: 8px; }
-        .stat-val { font-size: 26px; font-weight: 800; }
-        .stat-label { font-size: 12px; color: #888; font-weight: 600; margin-top: 2px; }
-
-        /* TABLES */
-        .tables-grid { display: grid; grid-template-columns: 1fr; gap: 22px; }
-        @media (min-width: 1024px) {
-            .tables-grid { grid-template-columns: 1fr 1fr; }
-            .full-width { grid-column: span 2; }
+        .page-title { font-size:22px; font-weight:800; }
+        .page-sub { font-size:13px; color:var(--muted); margin-top:2px; }
+        .topbar-right { display:flex; align-items:center; gap:12px; }
+        .live-clock {
+            background:var(--card); border:1px solid var(--border);
+            border-radius:10px; padding:8px 14px;
+            font-size:13px; font-weight:600; color:var(--muted2);
+            font-variant-numeric:tabular-nums;
         }
-        .table-card { background: white; border-radius: 16px; padding: 24px; box-shadow: var(--card-shadow); }
-        .table-card h3 { margin-bottom: 16px; font-size: 15px; font-weight: 800; }
-
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        th { padding: 10px 12px; text-align: left; background: #f8faf9; font-weight: 700; color: #555; border-bottom: 2px solid #f0f0f0; }
-        td { padding: 11px 12px; border-bottom: 1px solid #f5f5f5; vertical-align: middle; }
-        tr:last-child td { border-bottom: none; }
-        tr:hover td { background: #fafcfa; }
-
-        /* ACTION BUTTONS */
-        .btn-action { 
-            padding: 5px 10px; border: none; border-radius: 6px; cursor: pointer; 
-            font-weight: 700; font-size: 11px; transition: opacity 0.2s; white-space: nowrap;
+        .online-dot {
+            display:inline-block; width:8px; height:8px;
+            background:var(--green); border-radius:50%;
+            margin-right:6px;
+            animation:pulse 2s infinite;
         }
-        .btn-action:hover { opacity: 0.8; }
-        .btn-approve { background: var(--primary-light); color: var(--primary); }
-        .btn-delete  { background: var(--danger-light); color: var(--danger); }
-        .btn-boost   { background: var(--boost-light); color: #b45309; border: 1px solid #fde68a; }
-        .btn-boost.boosted { background: var(--boost); color: white; border-color: var(--boost); }
-        .btn-phone   { background: var(--info-light); color: var(--info); border: 1px solid #bbdefb; }
-        
-        .actions-cell { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+        @keyframes pulse {
+            0%,100% { opacity:1; }
+            50% { opacity:0.4; }
+        }
+        .btn-refresh {
+            padding:8px 16px; background:var(--card); border:1px solid var(--border);
+            border-radius:10px; color:var(--text); font-size:13px; font-weight:600;
+            cursor:pointer; transition:all 0.15s;
+        }
+        .btn-refresh:hover { background:var(--card2); border-color:var(--accent); }
 
-        /* STATUS TAGS */
-        .tag { display: inline-block; padding: 3px 9px; border-radius: 10px; font-size: 11px; font-weight: 700; }
-        .tag-active   { background: var(--primary-light); color: var(--primary); }
-        .tag-pending  { background: var(--warning-light); color: var(--warning); }
-        .tag-boosted  { background: var(--boost-light); color: #b45309; }
-        .tag-admin    { background: var(--danger-light); color: var(--danger); }
-        .tag-user     { background: var(--primary-light); color: var(--primary); }
-        .tag-agent    { background: var(--info-light); color: var(--info); }
+        /* ── STATS ── */
+        .stats-row { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:14px; margin-bottom:28px; }
+        .stat-card {
+            background:var(--card); border:1px solid var(--border);
+            border-radius:14px; padding:18px 20px;
+            transition:transform 0.15s, border-color 0.15s;
+        }
+        .stat-card:hover { transform:translateY(-2px); border-color:rgba(108,99,255,0.3); }
+        .stat-icon { font-size:22px; margin-bottom:10px; }
+        .stat-val { font-size:28px; font-weight:800; line-height:1; }
+        .stat-label { font-size:12px; color:var(--muted); margin-top:4px; font-weight:500; }
 
-        /* BOOST MODAL */
+        /* ── SECTIONS ── */
+        .section { display:none; }
+        .section.active { display:block; }
+
+        /* ── CARDS ── */
+        .card {
+            background:var(--card); border:1px solid var(--border);
+            border-radius:16px; padding:24px; margin-bottom:20px;
+        }
+        .card-header {
+            display:flex; align-items:center; justify-content:space-between;
+            margin-bottom:18px;
+        }
+        .card-title { font-size:15px; font-weight:700; display:flex; align-items:center; gap:8px; }
+        .card-count {
+            background:rgba(108,99,255,0.15); color:var(--accent);
+            font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px;
+        }
+
+        /* ── TABLE ── */
+        table { width:100%; border-collapse:collapse; font-size:13px; }
+        th {
+            padding:10px 14px; text-align:left;
+            background:rgba(255,255,255,0.03);
+            color:var(--muted); font-weight:700; font-size:11px;
+            text-transform:uppercase; letter-spacing:0.05em;
+            border-bottom:1px solid var(--border);
+        }
+        td { padding:13px 14px; border-bottom:1px solid rgba(255,255,255,0.04); vertical-align:middle; }
+        tr:last-child td { border-bottom:none; }
+        tbody tr:hover td { background:rgba(255,255,255,0.02); }
+
+        /* ── BADGES ── */
+        .badge {
+            display:inline-flex; align-items:center; gap:5px;
+            padding:4px 10px; border-radius:20px;
+            font-size:11px; font-weight:700;
+        }
+        .badge-green { background:rgba(34,197,94,0.15); color:var(--green); }
+        .badge-yellow { background:rgba(245,158,11,0.15); color:var(--yellow); }
+        .badge-red { background:rgba(239,68,68,0.15); color:var(--red); }
+        .badge-blue { background:rgba(59,130,246,0.15); color:var(--blue); }
+        .badge-purple { background:rgba(108,99,255,0.15); color:var(--accent); }
+        .badge-gray { background:rgba(100,116,139,0.15); color:var(--muted2); }
+
+        /* ── BUTTONS ── */
+        .btn {
+            padding:6px 12px; border-radius:8px; border:none;
+            font-size:12px; font-weight:700; cursor:pointer;
+            transition:opacity 0.15s; white-space:nowrap;
+            display:inline-flex; align-items:center; gap:5px;
+        }
+        .btn:hover { opacity:0.8; }
+        .btn-primary { background:var(--accent); color:white; }
+        .btn-green { background:rgba(34,197,94,0.15); color:var(--green); border:1px solid rgba(34,197,94,0.2); }
+        .btn-red { background:rgba(239,68,68,0.12); color:var(--red); border:1px solid rgba(239,68,68,0.2); }
+        .btn-yellow { background:rgba(245,158,11,0.12); color:var(--yellow); border:1px solid rgba(245,158,11,0.2); }
+        .btn-yellow.active-boost { background:rgba(245,158,11,0.3); border-color:var(--yellow); }
+        .btn-gray { background:rgba(255,255,255,0.06); color:var(--muted2); border:1px solid var(--border); }
+        .actions { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+
+        /* ── USERS ONLINE ── */
+        .online-indicator {
+            display:inline-flex; align-items:center; gap:5px;
+            font-size:11px; font-weight:700;
+        }
+        .online-indicator .dot {
+            width:7px; height:7px; border-radius:50%;
+            flex-shrink:0;
+        }
+        .dot-online { background:var(--green); animation:pulse 2s infinite; }
+        .dot-recent { background:var(--yellow); }
+        .dot-offline { background:var(--muted); }
+
+        /* ── AGENT REQUEST CARD ── */
+        .request-cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; }
+        .request-card {
+            background:var(--card2); border:1px solid var(--border);
+            border-radius:14px; padding:18px 20px;
+            border-left:3px solid var(--yellow);
+        }
+        .request-card h4 { font-size:15px; font-weight:700; margin-bottom:4px; }
+        .request-card .req-meta { font-size:12px; color:var(--muted); margin-bottom:14px; }
+        .request-card .req-actions { display:flex; gap:8px; }
+
+        /* ── PHONE ── */
+        .phone-btn {
+            display:inline-flex; align-items:center; gap:5px;
+            background:rgba(59,130,246,0.1); color:var(--blue);
+            border:1px solid rgba(59,130,246,0.2);
+            padding:4px 10px; border-radius:8px; font-size:12px;
+            font-weight:600; cursor:pointer; border-width:1px;
+            transition:background 0.15s;
+        }
+        .phone-btn:hover { background:rgba(59,130,246,0.2); }
+
+        /* ── EMPTY ── */
+        .empty { text-align:center; padding:40px 20px; color:var(--muted); }
+        .empty-icon { font-size:36px; margin-bottom:10px; }
+        .empty p { font-size:14px; }
+
+        /* ── MODAL ── */
         .modal-overlay {
-            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45);
-            z-index: 9999; align-items: center; justify-content: center;
+            display:none; position:fixed; inset:0;
+            background:rgba(0,0,0,0.6); z-index:9999;
+            align-items:center; justify-content:center; backdrop-filter:blur(4px);
         }
-        .modal-overlay.open { display: flex; }
+        .modal-overlay.open { display:flex; }
         .modal {
-            background: white; border-radius: 20px; padding: 36px 32px; 
-            max-width: 420px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-            animation: modalIn 0.25s ease;
+            background:var(--card); border:1px solid var(--border);
+            border-radius:20px; padding:32px; max-width:420px; width:90%;
+            animation:mIn 0.2s ease;
         }
-        @keyframes modalIn { from { transform: scale(0.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .modal h3 { font-size: 20px; font-weight: 800; margin-bottom: 8px; }
-        .modal p  { color: #666; font-size: 14px; margin-bottom: 24px; line-height: 1.6; }
-        .modal-actions { display: flex; gap: 10px; }
-        .modal-actions button { flex: 1; padding: 12px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; font-size: 14px; transition: opacity 0.2s; }
-        .modal-actions button:hover { opacity: 0.85; }
-        .btn-modal-confirm { background: var(--boost); color: white; }
-        .btn-modal-cancel  { background: #f5f5f5; color: #333; }
-        .btn-modal-unboost { background: var(--danger); color: white; }
+        @keyframes mIn { from{transform:scale(0.9);opacity:0} to{transform:scale(1);opacity:1} }
+        .modal h3 { font-size:18px; font-weight:800; margin-bottom:8px; }
+        .modal p { color:var(--muted); font-size:14px; margin-bottom:24px; line-height:1.6; }
+        .modal-actions { display:flex; gap:10px; }
+        .modal-actions button { flex:1; padding:12px; border-radius:10px; border:none; font-weight:700; font-size:14px; cursor:pointer; }
 
-        /* PHONE TOOLTIP */
-        .phone-reveal { 
-            display: inline-flex; align-items: center; gap: 6px; 
-            background: var(--info-light); color: var(--info); 
-            padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 700;
-            cursor: pointer; border: 1px solid #bbdefb; transition: background 0.2s;
+        /* ── TOAST ── */
+        #toast {
+            position:fixed; bottom:28px; left:50%; transform:translateX(-50%);
+            background:#1e2130; color:white; padding:12px 24px;
+            border-radius:30px; font-size:14px; font-weight:600;
+            z-index:99999; box-shadow:0 8px 32px rgba(0,0,0,0.4);
+            border:1px solid var(--border); transition:opacity 0.3s; opacity:0;
+            pointer-events:none;
         }
-        .phone-reveal:hover { background: #c5dff9; }
+        #toast.show { opacity:1; }
 
-        .empty-state { text-align: center; padding: 30px; color: #bbb; font-size: 14px; }
+        /* ── TIME DISPLAY ── */
+        .time-cell { font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
+        .time-ago { font-size:11px; color:var(--muted); }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width:5px; }
+        ::-webkit-scrollbar-track { background:transparent; }
+        ::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:3px; }
+
+        @media(max-width:768px){
+            .sidebar{ transform:translateX(-100%); }
+            .main{ margin-left:0; padding:16px; }
+        }
     </style>
 </head>
 <body>
 
-    <!-- LOGIN SCREEN -->
-    <div class="login-container" id="loginView">
-        <div class="login-card">
-            <h2>⚙ Админ Нэвтрэх</h2>
-            <p>Зөвхөн админ эрхтэй дугаараар нэвтэрнэ үү.</p>
-            <input type="text" id="adminPhone" placeholder="Утасны дугаар (Ж: 99111111)">
-            <button onclick="adminLogin()">НЭВТРЭХ</button>
-        </div>
+<!-- ═══════════════ LOGIN ═══════════════ -->
+<div id="loginView">
+    <div class="login-box">
+        <div class="login-logo">🏠</div>
+        <h2>GazarZar Admin</h2>
+        <p>Зөвхөн админ эрхтэй дугаараар нэвтэрнэ үү</p>
+        <input type="tel" id="adminPhone" placeholder="Утасны дугаар" />
+        <button onclick="adminLogin()">Нэвтрэх →</button>
     </div>
+</div>
 
-    <!-- ADMIN DASHBOARD -->
-    <div id="adminView">
-        <div class="header">
-            <h2>⚙ Админ Хяналтын Самбар</h2>
-            <div class="header-actions">
-                <button class="btn-header btn-refresh" onclick="checkAuth()">🔄 Шинэчлэх</button>
-                <a href="/" class="btn-header btn-site">🏠 Сайт үзэх</a>
-                <span class="status-badge">● Ажиллаж байна</span>
-                <button class="btn-logout" onclick="logout()">Гарах</button>
+<!-- ═══════════════ APP ═══════════════ -->
+<div id="appView">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <a class="logo-mark" href="https://gazarzar.mn" target="_blank">
+                <div class="logo-icon">🏠</div>
+                <div>
+                    <div class="logo-text">GazarZar</div>
+                    <div class="logo-sub">Admin Panel</div>
+                </div>
+            </a>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-label">Ерөнхий</div>
+            <button class="nav-item active" onclick="showSection('dashboard')" id="nav-dashboard">
+                <span class="nav-icon">📊</span> Хяналт
+            </button>
+
+            <div class="nav-label">Удирдлага</div>
+            <button class="nav-item" onclick="showSection('agents')" id="nav-agents">
+                <span class="nav-icon">👔</span> Агент
+                <span class="nav-badge yellow" id="agentBadge" style="display:none">0</span>
+            </button>
+            <button class="nav-item" onclick="showSection('listings')" id="nav-listings">
+                <span class="nav-icon">🏠</span> Зарууд
+                <span class="nav-badge" id="pendingBadge" style="display:none">0</span>
+            </button>
+            <button class="nav-item" onclick="showSection('users')" id="nav-users">
+                <span class="nav-icon">👥</span> Хэрэглэгчид
+            </button>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar">👤</div>
+                <div>
+                    <div class="user-name" id="adminName">Админ</div>
+                    <div class="user-role">Administrator</div>
+                </div>
+                <button class="btn-logout" onclick="logout()" title="Гарах">⏻</button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main">
+
+        <!-- TOPBAR -->
+        <div class="topbar">
+            <div>
+                <div class="page-title" id="pageTitle">📊 Хяналтын Самбар</div>
+                <div class="page-sub" id="pageSub">Ерөнхий статистик</div>
+            </div>
+            <div class="topbar-right">
+                <div class="live-clock"><span class="online-dot"></span><span id="liveClock">--:--:--</span></div>
+                <button class="btn-refresh" onclick="loadData()">🔄 Шинэчлэх</button>
             </div>
         </div>
 
         <!-- STATS -->
-        <div class="stats-grid" id="adminStats"></div>
+        <div class="stats-row" id="statsRow"></div>
 
-        <!-- TABLES -->
-        <div class="tables-grid">
-
-            <!-- PENDING -->
-            <div class="table-card full-width" id="pendingSection" style="display:none; border-left:5px solid #ffc107;">
-                <h3 style="color:#856404;">⏳ Батлах хүлээгдэж буй зарууд</h3>
-                <div id="adminPendingTable"></div>
-            </div>
-
-            <!-- ALL LISTINGS -->
-            <div class="table-card full-width">
-                <h3>📋 Бүх зарууд</h3>
-                <div id="adminListingTable"></div>
-            </div>
-
-            <!-- AGENTS -->
-            <div class="table-card">
-                <h3>👔 Агентуудын жагсаалт</h3>
-                <div id="adminAgentTable"></div>
-            </div>
-
-            <!-- USERS -->
-            <div class="table-card">
-                <h3>👤 Бүртгэлтэй хэрэглэгчид</h3>
-                <div id="adminUsersTable"></div>
-            </div>
-
-        </div>
-    </div>
-
-    <!-- BOOST MODAL -->
-    <div class="modal-overlay" id="boostModal">
-        <div class="modal">
-            <h3 id="boostModalTitle">⭐ Зарыг Boost хийх</h3>
-            <p id="boostModalDesc">Энэ зарыг Featured болгон дэлгэцийн эхэнд гаргах уу?</p>
-            <div class="modal-actions">
-                <button class="btn-modal-cancel" onclick="closeBoostModal()">Болих</button>
-                <button id="boostModalConfirm" class="btn-modal-confirm" onclick="confirmBoost()">⭐ Boost хийх</button>
+        <!-- ── DASHBOARD ── -->
+        <div class="section active" id="sec-dashboard">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">📋 Сүүлийн зарууд</div>
+                </div>
+                <div id="recentListings"></div>
             </div>
         </div>
+
+        <!-- ── AGENTS ── -->
+        <div class="section" id="sec-agents">
+            <!-- Agent Requests -->
+            <div class="card" id="agentRequestsCard">
+                <div class="card-header">
+                    <div class="card-title">⏳ Агент болох хүсэлтүүд
+                        <span class="card-count" id="reqCount">0</span>
+                    </div>
+                </div>
+                <div id="agentRequests"></div>
+            </div>
+
+            <!-- Registered Agents -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">✅ Бүртгэлтэй агентууд
+                        <span class="card-count" id="agentCount">0</span>
+                    </div>
+                </div>
+                <div id="agentsList"></div>
+            </div>
+        </div>
+
+        <!-- ── LISTINGS ── -->
+        <div class="section" id="sec-listings">
+            <!-- Pending -->
+            <div class="card" id="pendingCard" style="border-color:rgba(245,158,11,0.3);">
+                <div class="card-header">
+                    <div class="card-title" style="color:var(--yellow);">⏳ Батлагдаагүй зарууд
+                        <span class="card-count" id="pendCount" style="background:rgba(245,158,11,0.15);color:var(--yellow);">0</span>
+                    </div>
+                </div>
+                <div id="pendingTable"></div>
+            </div>
+
+            <!-- All Listings -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">📋 Бүх зарууд
+                        <span class="card-count" id="listCount">0</span>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <input id="listSearch" placeholder="🔍 Хайх..." oninput="filterListings()"
+                            style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);
+                                   background:var(--card2);color:var(--text);font-size:13px;outline:none;width:200px;">
+                    </div>
+                </div>
+                <div id="listingsTable"></div>
+            </div>
+        </div>
+
+        <!-- ── USERS ── -->
+        <div class="section" id="sec-users">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="online-dot"></span>
+                        Хэрэглэгчид — Бодит цагийн мэдээлэл
+                        <span class="card-count" id="userCount">0</span>
+                    </div>
+                    <div style="font-size:12px;color:var(--muted);" id="lastRefresh"></div>
+                </div>
+
+                <!-- Date filter -->
+                <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+                    <button class="btn btn-gray active-filter" onclick="setUserFilter('all')" id="uf-all">Бүгд</button>
+                    <button class="btn btn-gray" onclick="setUserFilter('today')" id="uf-today">Өнөөдөр</button>
+                    <button class="btn btn-gray" onclick="setUserFilter('week')" id="uf-week">7 хоног</button>
+                    <button class="btn btn-gray" onclick="setUserFilter('month')" id="uf-month">Сар</button>
+                </div>
+
+                <div id="usersTable"></div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<!-- BOOST MODAL -->
+<div class="modal-overlay" id="boostModal">
+    <div class="modal">
+        <h3 id="boostTitle">⭐ Boost хийх</h3>
+        <p id="boostDesc">Зарыг Featured болгох уу?</p>
+        <div class="modal-actions">
+            <button onclick="closeModal()" style="background:var(--card2);color:var(--text);">Болих</button>
+            <button id="boostConfirmBtn" onclick="confirmBoost()" style="background:var(--yellow);color:#1a1a1a;">⭐ Boost</button>
+        </div>
     </div>
+</div>
 
-    <script>
-        const API_BASE = 'https://gazarzar.onrender.com/api';
-        let boostTargetId = null;
-        let boostCurrentStatus = null;
+<div id="toast"></div>
 
-        // ── AUTH ────────────────────────────────────────────────
-        async function checkAuth() {
-            const gz_token = localStorage.getItem('gz_token');
-            if (!gz_token) {
-                showLogin();
-                return;
-            }
-            try {
-                const res = await fetch(`${API_BASE}/admin`, {
-                    headers: { 'Authorization': `Bearer ${gz_token}` }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    document.getElementById('loginView').style.display = 'none';
-                    document.getElementById('adminView').style.display = 'block';
-                    renderAdmin(data);
-                } else {
-                    alert('Админ эрхтэй нэвтэрнэ үү!');
-                    logout();
-                }
-            } catch (e) {
-                console.error('Connection error', e);
-            }
-        }
+<script>
+const API = 'https://gazarzar-backend.onrender.com/api';
+let adminData = null;
+let boostId = null, boostStatus = null;
+let allListings = [];
+let userFilter = 'all';
 
-        function showLogin() {
-            document.getElementById('loginView').style.display = 'flex';
-            document.getElementById('adminView').style.display = 'none';
-        }
+// ══════════════════════════════════════
+//  CLOCK
+// ══════════════════════════════════════
+function startClock() {
+    function tick() {
+        const now = new Date();
+        const d = now.toLocaleDateString('mn-MN', { year:'numeric', month:'2-digit', day:'2-digit' });
+        const t = now.toLocaleTimeString('mn-MN');
+        document.getElementById('liveClock').textContent = `${d}  ${t}`;
+    }
+    tick();
+    setInterval(tick, 1000);
+}
 
-        async function adminLogin() {
-            const phone = document.getElementById('adminPhone').value.trim();
-            if (!phone) return alert('Дугаараа оруулна уу');
-            const res = await fetch(`${API_BASE}/auth/phone-login`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone })
-            });
-            const data = await res.json();
-            if (res.ok) {
-                localStorage.setItem('gz_token', data.access_token);
-                checkAuth();
-            } else {
-                alert(data.detail || 'Алдаа гарлаа');
-            }
-        }
-
-        function logout() {
-            localStorage.removeItem('gz_token');
-            location.reload();
-        }
-
-        // ── RENDER ──────────────────────────────────────────────
-        function renderAdmin(data) {
-            renderStats(data);
-            renderPending(data.listings);
-            renderAllListings(data.listings);
-            renderAgents(data.agents);
-            renderUsers(data.users);
-        }
-
-        function renderStats(data) {
-            const statsEl = document.getElementById('adminStats');
-            const cards = [
-                { label: 'Нийт зар',  val: data.total_listings,  icon: '🏠', color: '#2d5a27' },
-                { label: 'Идэвхтэй',  val: data.active_listings,  icon: '✅', color: '#28a745' },
-                { label: 'Boosted',    val: data.boosted_listings, icon: '⭐', color: '#f59e0b' },
-                { label: 'Агентууд',  val: data.total_agents,     icon: '👔', color: '#007bff' },
-                { label: 'Хэрэглэгч', val: data.total_users,      icon: '👤', color: '#6f42c1' },
-                { label: 'Орлого ₮',  val: data.revenue_this_month ? data.revenue_this_month.toLocaleString() : '—', icon: '💰', color: '#e83e8c' },
-            ];
-            statsEl.innerHTML = cards.map(c => `
-                <div class="stat-card" style="border-left:4px solid ${c.color};">
-                    <div class="stat-icon">${c.icon}</div>
-                    <div class="stat-val" style="color:${c.color};">${c.val}</div>
-                    <div class="stat-label">${c.label}</div>
-                </div>`).join('');
-        }
-
-        function renderPending(listings) {
-            const pending = listings.filter(l => l.status !== 'active');
-            const section = document.getElementById('pendingSection');
-            const el = document.getElementById('adminPendingTable');
-            if (pending.length === 0) { section.style.display = 'none'; return; }
-            section.style.display = 'block';
-            el.innerHTML = `<table>
-                <thead><tr><th>Гарчиг</th><th>Үнэ</th><th>Үйлдэл</th></tr></thead>
-                <tbody>${pending.map(l => `
-                    <tr>
-                        <td style="font-weight:600;">${escHtml(l.title)}</td>
-                        <td style="color:var(--primary); font-weight:700;">${formatPrice(l.price)}</td>
-                        <td>
-                            <div class="actions-cell">
-                                <button class="btn-action btn-approve" onclick="approveListing(${l.id})">✅ БАТЛАХ</button>
-                                <button class="btn-action btn-delete"  onclick="deleteListing(${l.id})">🗑 УСТГАХ</button>
-                            </div>
-                        </td>
-                    </tr>`).join('')}
-                </tbody></table>`;
-        }
-
-        function renderAllListings(listings) {
-            const el = document.getElementById('adminListingTable');
-            if (!listings || listings.length === 0) {
-                el.innerHTML = '<div class="empty-state">Зар байхгүй байна</div>'; return;
-            }
-            el.innerHTML = `<table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Гарчиг</th>
-                        <th>Үнэ</th>
-                        <th>Төлөв</th>
-                        <th>Үйлдэл</th>
-                    </tr>
-                </thead>
-                <tbody>${listings.map(l => {
-                    const isBoosted = l.boost_status === 'active';
-                    return `
-                    <tr>
-                        <td style="color:#aaa; font-size:12px;">#${l.id}</td>
-                        <td style="font-weight:600; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escHtml(l.title)}</td>
-                        <td style="color:var(--primary); font-weight:700; white-space:nowrap;">${formatPrice(l.price)}</td>
-                        <td>
-                            <span class="tag ${l.status === 'active' ? 'tag-active' : 'tag-pending'}">
-                                ${l.status === 'active' ? 'Идэвхтэй' : 'Хүлээгдэж буй'}
-                            </span>
-                            ${isBoosted ? '<span class="tag tag-boosted" style="margin-left:4px;">⭐ Boosted</span>' : ''}
-                        </td>
-                        <td>
-                            <div class="actions-cell">
-                                <button class="btn-action btn-boost ${isBoosted ? 'boosted' : ''}"
-                                    onclick="openBoostModal(${l.id}, '${isBoosted ? 'active' : 'none'}', '${escHtml(l.title)}')">
-                                    ${isBoosted ? '⭐ Unboost' : '⭐ Boost'}
-                                </button>
-                                <button class="btn-action btn-delete" onclick="deleteListing(${l.id})">🗑 Устгах</button>
-                            </div>
-                        </td>
-                    </tr>`;
-                }).join('')}
-                </tbody></table>`;
-        }
-
-        function renderAgents(agents) {
-            const el = document.getElementById('adminAgentTable');
-            if (!agents || agents.length === 0) {
-                el.innerHTML = '<div class="empty-state">Агент бүртгэлгүй байна</div>'; return;
-            }
-            el.innerHTML = `<table>
-                <thead><tr><th>Нэр</th><th>Зар</th><th>Үнэлгээ</th><th>Утас</th></tr></thead>
-                <tbody>${agents.map(a => `
-                    <tr>
-                        <td style="font-weight:700;">${escHtml(a.name)}</td>
-                        <td style="color:var(--primary); font-weight:700;">${a.listings_count}</td>
-                        <td>⭐ ${a.rating ?? '—'}</td>
-                        <td>
-                            <span class="phone-reveal" onclick="revealPhone(this, '${escHtml(a.phone || '—')}')">
-                                📞 Харах
-                            </span>
-                        </td>
-                    </tr>`).join('')}
-                </tbody></table>`;
-        }
-
-        function renderUsers(users) {
-            const el = document.getElementById('adminUsersTable');
-            if (!users || users.length === 0) {
-                el.innerHTML = '<div class="empty-state">Хэрэглэгч бүртгэлгүй байна</div>'; return;
-            }
-            el.innerHTML = `<table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Нэр</th>
-                        <th>Үүрэг</th>
-                        <th>Зар</th>
-                        <th>Утас</th>
-                        <th>Огноо</th>
-                    </tr>
-                </thead>
-                <tbody>${users.map(u => `
-                    <tr>
-                        <td style="color:#aaa; font-size:12px;">#${u.id}</td>
-                        <td style="font-weight:600;">${escHtml(u.name || '—')}</td>
-                        <td><span class="tag ${u.role === 'admin' ? 'tag-admin' : u.role === 'agent' ? 'tag-agent' : 'tag-user'}">${u.role}</span></td>
-                        <td style="font-weight:700;">${u.listings_count}</td>
-                        <td>
-                            <span class="phone-reveal" onclick="revealPhone(this, '${escHtml(u.phone || '—')}')">
-                                📞 Харах
-                            </span>
-                        </td>
-                        <td style="font-size:12px; color:#888;">${u.created_at ? new Date(u.created_at).toLocaleDateString('mn-MN') : '—'}</td>
-                    </tr>`).join('')}
-                </tbody></table>`;
-        }
-
-        // ── PHONE REVEAL ────────────────────────────────────────
-        function revealPhone(el, phone) {
-            el.textContent = phone;
-            el.style.cursor = 'default';
-            el.onclick = null;
-            el.style.background = '#e3f2fd';
-        }
-
-        // ── LISTING ACTIONS ─────────────────────────────────────
-        async function approveListing(id) {
-            if (!confirm('Энэ зарыг батлах уу?')) return;
-            const gz_token = localStorage.getItem('gz_token');
-            const res = await fetch(`${API_BASE}/admin/listings/${id}/approve`, {
-                method: 'POST', headers: { 'Authorization': `Bearer ${gz_token}` }
-            });
-            if (res.ok) { showToast('✅ Амжилттай баталлаа!'); checkAuth(); }
-            else alert('Алдаа гарлаа');
-        }
-
-        async function deleteListing(id) {
-            if (!confirm('Энэ зарыг бүр мөсөн устгах уу? Энэ үйлдлийг буцаах боломжгүй!')) return;
-            const gz_token = localStorage.getItem('gz_token');
-            const res = await fetch(`${API_BASE}/admin/listings/${id}`, {
-                method: 'DELETE', headers: { 'Authorization': `Bearer ${gz_token}` }
-            });
-            if (res.ok) { showToast('🗑 Зар устгагдлаа'); checkAuth(); }
-            else alert('Алдаа гарлаа');
-        }
-
-        // ── BOOST MODAL ─────────────────────────────────────────
-        function openBoostModal(id, currentStatus, title) {
-            boostTargetId = id;
-            boostCurrentStatus = currentStatus;
-            const isBoosted = currentStatus === 'active';
-            document.getElementById('boostModalTitle').textContent = isBoosted ? '⭐ Boost болиулах' : '⭐ Зарыг Boost хийх';
-            document.getElementById('boostModalDesc').textContent = isBoosted
-                ? `"${title}" зарыг featured жагсаалтаас хасах уу?`
-                : `"${title}" зарыг Featured болгон дэлгэцийн эхэнд гаргах уу?`;
-            const confirmBtn = document.getElementById('boostModalConfirm');
-            confirmBtn.textContent = isBoosted ? '❌ Болиулах' : '⭐ Boost хийх';
-            confirmBtn.className = isBoosted ? 'btn-modal-unboost' : 'btn-modal-confirm';
-            document.getElementById('boostModal').classList.add('open');
-        }
-
-        function closeBoostModal() {
-            document.getElementById('boostModal').classList.remove('open');
-            boostTargetId = null;
-            boostCurrentStatus = null;
-        }
-
-        async function confirmBoost() {
-            if (!boostTargetId) return;
-            const gz_token = localStorage.getItem('gz_token');
-            const res = await fetch(`${API_BASE}/admin/listings/${boostTargetId}/boost`, {
-                method: 'POST', headers: { 'Authorization': `Bearer ${gz_token}` }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                showToast(data.boosted ? '⭐ Boost хийгдлээ!' : 'Boost болиулагдлаа');
-                closeBoostModal();
-                checkAuth();
-            } else {
-                alert('Алдаа гарлаа');
-            }
-        }
-
-        // Close modal on overlay click
-        document.getElementById('boostModal').addEventListener('click', function(e) {
-            if (e.target === this) closeBoostModal();
+// ══════════════════════════════════════
+//  AUTH
+// ══════════════════════════════════════
+async function adminLogin() {
+    const phone = document.getElementById('adminPhone').value.trim();
+    if (!phone) return toast('Дугаараа оруулна уу');
+    try {
+        const res = await fetch(`${API}/auth/phone-login`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ phone })
         });
-
-        // ── TOAST ───────────────────────────────────────────────
-        function showToast(msg) {
-            let t = document.getElementById('adminToast');
-            if (!t) {
-                t = document.createElement('div');
-                t.id = 'adminToast';
-                t.style.cssText = `
-                    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
-                    background:#1a1e23; color:white; padding:12px 24px; border-radius:30px;
-                    font-size:14px; font-weight:600; z-index:99999;
-                    box-shadow:0 8px 24px rgba(0,0,0,0.25); transition:opacity 0.3s;
-                `;
-                document.body.appendChild(t);
-            }
-            t.textContent = msg;
-            t.style.opacity = '1';
-            clearTimeout(t._timer);
-            t._timer = setTimeout(() => { t.style.opacity = '0'; }, 2500);
+        const data = await res.json();
+        if (res.ok) {
+            localStorage.setItem('gz_token', data.access_token);
+            checkAuth();
+        } else {
+            toast('❌ ' + (data.detail || 'Алдаа гарлаа'));
         }
+    } catch(e) { toast('❌ Холболтын алдаа'); }
+}
 
-        // ── HELPERS ─────────────────────────────────────────────
-        function escHtml(str) {
-            if (str == null) return '—';
-            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+async function checkAuth() {
+    const token = localStorage.getItem('gz_token');
+    if (!token) { showLogin(); return; }
+    try {
+        const res = await fetch(`${API}/admin`, {
+            headers:{ 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            adminData = await res.json();
+            document.getElementById('loginView').style.display = 'none';
+            document.getElementById('appView').style.display = 'block';
+            render();
+        } else {
+            toast('Admin эрх шаардлагатай');
+            showLogin();
         }
+    } catch(e) { toast('❌ Backend холбогдсонгүй'); }
+}
 
-        function formatPrice(price) {
-            if (!price) return '—';
-            if (price >= 1_000_000_000) return (price / 1_000_000_000).toFixed(price % 1_000_000_000 === 0 ? 0 : 1) + ' тэрбум ₮';
-            if (price >= 1_000_000)     return (price / 1_000_000).toFixed(price % 1_000_000 === 0 ? 0 : 1) + ' сая ₮';
-            return price.toLocaleString() + ' ₮';
-        }
+function showLogin() {
+    document.getElementById('loginView').style.display = 'flex';
+    document.getElementById('appView').style.display = 'none';
+}
 
-        // ── INIT ─────────────────────────────────────────────────
-        checkAuth();
-        setInterval(checkAuth, 20000); // Auto-refresh every 20s
-    </script>
+function logout() {
+    localStorage.removeItem('gz_token');
+    location.reload();
+}
+
+async function loadData() {
+    await checkAuth();
+    toast('✅ Шинэчлэгдлээ');
+}
+
+// ══════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════
+const pageTitles = {
+    dashboard: ['📊 Хяналтын Самбар', 'Ерөнхий статистик'],
+    agents:    ['👔 Агент Удирдлага', 'Хүсэлт ба бүртгэлтэй агентууд'],
+    listings:  ['🏠 Зарын Удирдлага', 'Бүх зарууд, boost болон устгалт'],
+    users:     ['👥 Хэрэглэгчид', 'Нэвтэрсэн цаг, бодит цагийн мэдэгдэл'],
+};
+
+function showSection(name) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('sec-' + name).classList.add('active');
+    document.getElementById('nav-' + name).classList.add('active');
+    const [title, sub] = pageTitles[name];
+    document.getElementById('pageTitle').textContent = title;
+    document.getElementById('pageSub').textContent = sub;
+}
+
+// ══════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════
+function render() {
+    if (!adminData) return;
+    allListings = adminData.listings || [];
+    renderStats();
+    renderDashboard();
+    renderAgents();
+    renderListings();
+    renderUsers();
+
+    // update last refresh
+    const now = new Date();
+    document.getElementById('lastRefresh').textContent =
+        'Сүүлд шинэчлэгдсэн: ' + now.toLocaleTimeString('mn-MN');
+}
+
+// ── STATS ──
+function renderStats() {
+    const d = adminData;
+    const pending = (d.listings||[]).filter(l => l.status !== 'active').length;
+    const boosted = (d.listings||[]).filter(l => l.boost_status === 'active').length;
+    const cards = [
+        { label:'Нийт зар',  val: d.total_listings  || 0,  icon:'🏠', color:var_c('--accent') },
+        { label:'Идэвхтэй',  val: d.active_listings  || 0,  icon:'✅', color:var_c('--green') },
+        { label:'Boosted',   val: boosted,                   icon:'⭐', color:var_c('--yellow') },
+        { label:'Хүлээгдэж', val: pending,                   icon:'⏳', color:'#f97316' },
+        { label:'Агентууд',  val: d.total_agents     || 0,  icon:'👔', color:var_c('--blue') },
+        { label:'Хэрэглэгч', val: d.total_users      || 0,  icon:'👥', color:'#a855f7' },
+    ];
+    document.getElementById('statsRow').innerHTML = cards.map(c => `
+        <div class="stat-card" style="border-left:3px solid ${c.color}">
+            <div class="stat-icon">${c.icon}</div>
+            <div class="stat-val" style="color:${c.color}">${c.val}</div>
+            <div class="stat-label">${c.label}</div>
+        </div>`).join('');
+
+    // Badges
+    if (pending > 0) {
+        document.getElementById('pendingBadge').textContent = pending;
+        document.getElementById('pendingBadge').style.display = '';
+    } else {
+        document.getElementById('pendingBadge').style.display = 'none';
+    }
+}
+
+function var_c(v) {
+    return getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+}
+
+// ── DASHBOARD ──
+function renderDashboard() {
+    const recent = [...allListings].slice(0, 10);
+    const el = document.getElementById('recentListings');
+    if (!recent.length) { el.innerHTML = empty('Зар байхгүй байна'); return; }
+    el.innerHTML = `<table>
+        <thead><tr><th>ID</th><th>Гарчиг</th><th>Үнэ</th><th>Төлөв</th><th>Үйлдэл</th></tr></thead>
+        <tbody>${recent.map(l => listingRow(l)).join('')}</tbody>
+    </table>`;
+}
+
+// ── AGENTS ──
+function renderAgents() {
+    const agents = adminData.agents || [];
+    // Pending agent requests (users with role='agent' request or pending agents)
+    const requests = (adminData.users || []).filter(u => u.role === 'agent_pending');
+    const registered = agents;
+
+    // Update badge
+    if (requests.length > 0) {
+        document.getElementById('agentBadge').textContent = requests.length;
+        document.getElementById('agentBadge').style.display = '';
+    } else {
+        document.getElementById('agentBadge').style.display = 'none';
+    }
+    document.getElementById('reqCount').textContent = requests.length;
+    document.getElementById('agentCount').textContent = registered.length;
+
+    // Requests
+    const reqEl = document.getElementById('agentRequests');
+    if (!requests.length) {
+        reqEl.innerHTML = `<div class="empty"><div class="empty-icon">🎉</div><p>Шийдэгдээгүй хүсэлт байхгүй байна</p></div>`;
+    } else {
+        reqEl.innerHTML = `<div class="request-cards">${requests.map(u => `
+            <div class="request-card">
+                <h4>👤 ${esc(u.name || '—')}</h4>
+                <div class="req-meta">📞 ${esc(u.phone || '—')} · ${fmtDate(u.created_at)}</div>
+                <div class="req-actions">
+                    <button class="btn btn-green" onclick="approveAgent(${u.id})">✅ Батлах</button>
+                    <button class="btn btn-red" onclick="rejectAgent(${u.id})">❌ Татгалзах</button>
+                </div>
+            </div>`).join('')}</div>`;
+    }
+
+    // Registered
+    const agEl = document.getElementById('agentsList');
+    if (!registered.length) {
+        agEl.innerHTML = empty('Бүртгэлтэй агент байхгүй байна'); return;
+    }
+    agEl.innerHTML = `<table>
+        <thead><tr><th>Нэр</th><th>Зар</th><th>Үнэлгээ</th><th>Утас</th><th>Элссэн</th></tr></thead>
+        <tbody>${registered.map(a => `
+            <tr>
+                <td><strong>${esc(a.name)}</strong></td>
+                <td><span class="badge badge-purple">${a.listings_count || 0} зар</span></td>
+                <td>⭐ ${a.rating ?? '—'}</td>
+                <td><button class="phone-btn" onclick="revealPhone(this,'${esc(a.phone||'—')}')">📞 Харах</button></td>
+                <td class="time-cell">${fmtDate(a.created_at)}</td>
+            </tr>`).join('')}
+        </tbody></table>`;
+}
+
+// ── LISTINGS ──
+function renderListings() {
+    const listings = allListings;
+    const pending = listings.filter(l => l.status !== 'active');
+    document.getElementById('pendCount').textContent = pending.length;
+    document.getElementById('listCount').textContent = listings.length;
+
+    // Pending
+    const pendEl = document.getElementById('pendingTable');
+    document.getElementById('pendingCard').style.display = pending.length ? '' : 'none';
+    if (pending.length) {
+        pendEl.innerHTML = `<table>
+            <thead><tr><th>Гарчиг</th><th>Үнэ</th><th>Хэрэглэгч</th><th>Үйлдэл</th></tr></thead>
+            <tbody>${pending.map(l => `
+                <tr>
+                    <td><strong>${esc(l.title)}</strong></td>
+                    <td style="color:var(--accent);font-weight:700">${fmtPrice(l.price)}</td>
+                    <td class="time-cell">${esc(l.user_phone || '—')}</td>
+                    <td><div class="actions">
+                        <button class="btn btn-green" onclick="approveListing(${l.id})">✅ Батлах</button>
+                        <button class="btn btn-red" onclick="deleteListing(${l.id})">🗑 Устгах</button>
+                    </div></td>
+                </tr>`).join('')}
+            </tbody></table>`;
+    }
+
+    // All
+    renderListingsTable(listings);
+}
+
+function renderListingsTable(listings) {
+    const el = document.getElementById('listingsTable');
+    if (!listings.length) { el.innerHTML = empty('Зар байхгүй байна'); return; }
+    el.innerHTML = `<table>
+        <thead><tr><th>ID</th><th>Гарчиг</th><th>Үнэ</th><th>Дүүрэг</th><th>Төлөв</th><th>Үйлдэл</th></tr></thead>
+        <tbody>${listings.map(l => listingRow(l)).join('')}</tbody>
+    </table>`;
+}
+
+function listingRow(l) {
+    const boosted = l.boost_status === 'active';
+    const statusBadge = l.status === 'active'
+        ? `<span class="badge badge-green">✅ Идэвхтэй</span>`
+        : `<span class="badge badge-yellow">⏳ Хүлээгдэж буй</span>`;
+    const boostBadge = boosted ? `<span class="badge badge-yellow" style="margin-left:4px">⭐ Boosted</span>` : '';
+    return `<tr>
+        <td class="time-cell">#${l.id}</td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600">${esc(l.title)}</td>
+        <td style="color:var(--accent);font-weight:700;white-space:nowrap">${fmtPrice(l.price)}</td>
+        <td class="time-cell">${esc(l.district || '—')}</td>
+        <td>${statusBadge}${boostBadge}</td>
+        <td><div class="actions">
+            <button class="btn btn-yellow ${boosted ? 'active-boost' : ''}"
+                onclick="openBoost(${l.id}, '${boosted ? 'active' : 'none'}', '${esc(l.title)}')">
+                ${boosted ? '⭐ Unboost' : '⭐ Boost'}
+            </button>
+            <button class="btn btn-red" onclick="deleteListing(${l.id})">🗑</button>
+        </div></td>
+    </tr>`;
+}
+
+function filterListings() {
+    const q = document.getElementById('listSearch').value.toLowerCase();
+    const filtered = allListings.filter(l =>
+        (l.title || '').toLowerCase().includes(q) ||
+        (l.district || '').toLowerCase().includes(q)
+    );
+    renderListingsTable(filtered);
+}
+
+// ── USERS ──
+function setUserFilter(f) {
+    userFilter = f;
+    ['all','today','week','month'].forEach(id => {
+        document.getElementById('uf-'+id).style.background = id === f
+            ? 'rgba(108,99,255,0.2)' : '';
+        document.getElementById('uf-'+id).style.color = id === f
+            ? 'var(--accent)' : '';
+        document.getElementById('uf-'+id).style.borderColor = id === f
+            ? 'var(--accent)' : '';
+    });
+    renderUsers();
+}
+
+function renderUsers() {
+    let users = adminData.users || [];
+    const now = new Date();
+
+    // Filter by date
+    if (userFilter === 'today') {
+        users = users.filter(u => {
+            if (!u.created_at) return false;
+            const d = new Date(u.created_at);
+            return d.toDateString() === now.toDateString();
+        });
+    } else if (userFilter === 'week') {
+        const week = new Date(now - 7 * 86400000);
+        users = users.filter(u => u.created_at && new Date(u.created_at) >= week);
+    } else if (userFilter === 'month') {
+        const month = new Date(now - 30 * 86400000);
+        users = users.filter(u => u.created_at && new Date(u.created_at) >= month);
+    }
+
+    document.getElementById('userCount').textContent = users.length;
+
+    const el = document.getElementById('usersTable');
+    if (!users.length) { el.innerHTML = empty('Хэрэглэгч байхгүй байна'); return; }
+
+    el.innerHTML = `<table>
+        <thead><tr>
+            <th>ID</th>
+            <th>Нэр</th>
+            <th>Утас</th>
+            <th>Үүрэг</th>
+            <th>Зар</th>
+            <th>Бүртгүүлсэн огноо</th>
+            <th>Цаг</th>
+        </tr></thead>
+        <tbody>${users.map(u => {
+            const roleMap = {
+                admin: `<span class="badge badge-red">🔑 Admin</span>`,
+                agent: `<span class="badge badge-blue">👔 Agent</span>`,
+                user:  `<span class="badge badge-gray">👤 User</span>`,
+            };
+            const badge = roleMap[u.role] || `<span class="badge badge-gray">${u.role}</span>`;
+            const dateStr = u.created_at ? new Date(u.created_at).toLocaleDateString('mn-MN', {
+                year:'numeric', month:'2-digit', day:'2-digit'
+            }) : '—';
+            const timeStr = u.created_at ? new Date(u.created_at).toLocaleTimeString('mn-MN', {
+                hour:'2-digit', minute:'2-digit'
+            }) : '—';
+            const isNew = u.created_at && (now - new Date(u.created_at)) < 86400000;
+            return `<tr>
+                <td class="time-cell">#${u.id}</td>
+                <td><strong>${esc(u.name||'—')}</strong>${isNew ? ' <span class="badge badge-green" style="font-size:10px">Шинэ</span>' : ''}</td>
+                <td><button class="phone-btn" onclick="revealPhone(this,'${esc(u.phone||'—')}')">📞 Харах</button></td>
+                <td>${badge}</td>
+                <td style="font-weight:700;color:var(--accent)">${u.listings_count||0}</td>
+                <td class="time-cell">${dateStr}</td>
+                <td class="time-cell" style="color:var(--muted2)">${timeStr}</td>
+            </tr>`;
+        }).join('')}
+        </tbody></table>`;
+}
+
+// ══════════════════════════════════════
+//  ACTIONS
+// ══════════════════════════════════════
+async function approveListing(id) {
+    if (!confirm('Энэ зарыг батлах уу?')) return;
+    const token = localStorage.getItem('gz_token');
+    const res = await fetch(`${API}/admin/listings/${id}/approve`, {
+        method:'POST', headers:{ 'Authorization': `Bearer ${token}` }
+    });
+    if (res.ok) { toast('✅ Зар батлагдлаа!'); loadData(); }
+    else toast('❌ Алдаа гарлаа');
+}
+
+async function deleteListing(id) {
+    if (!confirm('Зарыг бүр мөсөн устгах уу? Буцаах боломжгүй!')) return;
+    const token = localStorage.getItem('gz_token');
+    const res = await fetch(`${API}/admin/listings/${id}`, {
+        method:'DELETE', headers:{ 'Authorization': `Bearer ${token}` }
+    });
+    if (res.ok) { toast('🗑 Зар устгагдлаа'); loadData(); }
+    else toast('❌ Алдаа гарлаа');
+}
+
+async function approveAgent(userId) {
+    if (!confirm('Энэ хэрэглэгчийг агент болгох уу?')) return;
+    const token = localStorage.getItem('gz_token');
+    const res = await fetch(`${API}/admin/users/${userId}/set-role`, {
+        method:'POST', headers:{ 'Authorization': `Bearer ${token}`, 'Content-Type':'application/json' },
+        body: JSON.stringify({ role: 'agent' })
+    });
+    if (res.ok) { toast('✅ Агентаар батлагдлаа!'); loadData(); }
+    else toast('❌ Алдаа гарлаа');
+}
+
+async function rejectAgent(userId) {
+    if (!confirm('Хүсэлтийг татгалзах уу?')) return;
+    const token = localStorage.getItem('gz_token');
+    const res = await fetch(`${API}/admin/users/${userId}/set-role`, {
+        method:'POST', headers:{ 'Authorization': `Bearer ${token}`, 'Content-Type':'application/json' },
+        body: JSON.stringify({ role: 'user' })
+    });
+    if (res.ok) { toast('Хүсэлт татгалзагдлаа'); loadData(); }
+    else toast('❌ Алдаа гарлаа');
+}
+
+// ── BOOST ──
+function openBoost(id, status, title) {
+    boostId = id; boostStatus = status;
+    const isBoosted = status === 'active';
+    document.getElementById('boostTitle').textContent = isBoosted ? '❌ Boost болиулах' : '⭐ Boost хийх';
+    document.getElementById('boostDesc').textContent = isBoosted
+        ? `"${title}" зарыг Featured жагсаалтаас хасах уу?`
+        : `"${title}" зарыг Featured болгон дэлгэцийн эхэнд гаргах уу?`;
+    const btn = document.getElementById('boostConfirmBtn');
+    btn.textContent = isBoosted ? '❌ Болиулах' : '⭐ Boost хийх';
+    btn.style.background = isBoosted ? 'var(--red)' : 'var(--yellow)';
+    document.getElementById('boostModal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('boostModal').classList.remove('open'); }
+
+async function confirmBoost() {
+    if (!boostId) return;
+    const token = localStorage.getItem('gz_token');
+    const res = await fetch(`${API}/admin/listings/${boostId}/boost`, {
+        method:'POST', headers:{ 'Authorization': `Bearer ${token}` }
+    });
+    if (res.ok) {
+        const d = await res.json();
+        toast(d.boosted ? '⭐ Boost хийгдлээ!' : 'Boost болиулагдлаа');
+        closeModal(); loadData();
+    } else toast('❌ Алдаа гарлаа');
+}
+
+document.getElementById('boostModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+});
+
+// ══════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════
+function revealPhone(el, phone) {
+    el.textContent = phone;
+    el.style.cursor = 'default';
+    el.onclick = null;
+}
+
+function toast(msg, ms = 2500) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._t);
+    t._t = setTimeout(() => t.classList.remove('show'), ms);
+}
+
+function empty(msg) {
+    return `<div class="empty"><div class="empty-icon">📭</div><p>${msg}</p></div>`;
+}
+
+function esc(s) {
+    if (s == null) return '—';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function fmtPrice(p) {
+    if (!p) return '—';
+    if (p >= 1e9) return (p/1e9).toFixed(p%1e9===0?0:1) + ' тэрбум ₮';
+    if (p >= 1e6) return (p/1e6).toFixed(p%1e6===0?0:1) + ' сая ₮';
+    return Number(p).toLocaleString() + ' ₮';
+}
+
+function fmtDate(d) {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('mn-MN', { year:'numeric', month:'2-digit', day:'2-digit' });
+}
+
+// ══════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════
+startClock();
+checkAuth();
+setInterval(() => { if (document.getElementById('appView').style.display !== 'none') loadData(); }, 30000);
+</script>
 </body>
 </html>
