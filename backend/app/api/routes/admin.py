@@ -66,7 +66,7 @@ def get_admin_stats(
             "name": u.name or "—",
             "role": u.role,
             "listings_count": len(u.listings) if hasattr(u, 'listings') else 0,
-            "created_at": u.created_at.isoformat() if hasattr(u, 'created_at') and u.created_at else None,
+            "created_at": u.created_at.replace(tzinfo=timezone.utc).isoformat() if hasattr(u, 'created_at') and u.created_at else None,
         })
 
     return {
@@ -141,6 +141,6 @@ def get_users(
             "name": u.name or "—",
             "role": u.role,
             "listings_count": len(u.listings) if hasattr(u, 'listings') else 0,
-            "created_at": u.created_at.isoformat() if hasattr(u, 'created_at') and u.created_at else None,
+            "created_at": u.created_at.replace(tzinfo=timezone.utc).isoformat() if hasattr(u, 'created_at') and u.created_at else None,
         })
     return {"users": result, "total": len(result)}
