@@ -64,7 +64,7 @@ def get_admin_stats(
             "id": u.id,
             "phone": u.phone,
             "name": u.name or "—",
-            "role": u.role,
+            "role": u.role.value if hasattr(u.role, 'value') else str(u.role),
             "listings_count": len(u.listings) if hasattr(u, 'listings') else 0,
             "created_at": u.created_at.replace(tzinfo=timezone.utc).isoformat() if hasattr(u, 'created_at') and u.created_at else None,
         })

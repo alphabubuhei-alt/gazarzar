@@ -2909,10 +2909,12 @@
                 
                 if (!profileRes.ok) {
                     const err = await profileRes.json();
-                    console.error("Backend profile update failed:", err);
+                    console.warn("Backend profile update failed:", err.detail);
+                    // Continue saving locally even if backend sync fails
                 }
             } catch (e) {
-                console.error("Sync to backend failed:", e);
+                console.warn("Sync to backend failed:", e);
+                // Continue saving locally
             }
         }
 

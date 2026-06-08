@@ -846,11 +846,13 @@ function renderUsers() {
             <th>Зар</th>
             <th>Бүртгүүлсэн огноо</th>
             <th>Цаг</th>
+            <th>Үйлдэл</th>
         </tr></thead>
         <tbody>${users.map(u => {
             const roleMap = {
                 admin: `<span class="badge badge-red">🔑 Admin</span>`,
                 agent: `<span class="badge badge-blue">👔 Agent</span>`,
+                agent_pending: `<span class="badge badge-yellow" style="background:#f59e0b;color:#fff;">⏳ Хүлээгдэж буй</span>`,
                 user:  `<span class="badge badge-gray">👤 User</span>`,
             };
             const badge = roleMap[u.role] || `<span class="badge badge-gray">${u.role}</span>`;
@@ -869,6 +871,7 @@ function renderUsers() {
                 <td style="font-weight:700;color:var(--accent)">${u.listings_count||0}</td>
                 <td class="time-cell">${dateStr}</td>
                 <td class="time-cell" style="color:var(--muted2)">${timeStr}</td>
+                <td>${u.role === 'agent_pending' ? `<button class="btn btn-green" style="font-size:11px;padding:4px 10px;" onclick="approveAgent(${u.id})">✅ Батлах</button> <button class="btn btn-red" style="font-size:11px;padding:4px 10px;" onclick="rejectAgent(${u.id})">❌ Татгалзах</button>` : (u.role !== 'admin' ? `<button class="btn btn-red" style="font-size:11px;padding:4px 10px;" onclick="rejectAgent(${u.id})">🔽 Буцаах</button>` : '')}</td>
             </tr>`;
         }).join('')}
         </tbody></table>`;
