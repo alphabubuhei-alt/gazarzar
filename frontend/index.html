@@ -1476,6 +1476,14 @@
 
             const properties = apiListings.map(p => {
                 const priceVal = p.price || 0;
+                let primaryImg = p.primary_image || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1200&q=80';
+                if (primaryImg.startsWith('/uploads')) {
+                    primaryImg = API_BASE.replace('/api', '') + primaryImg;
+                }
+                let ownerAvatar = p.owner_avatar || DEFAULT_AVATAR;
+                if (ownerAvatar.startsWith('/uploads')) {
+                    ownerAvatar = API_BASE.replace('/api', '') + ownerAvatar;
+                }
                 return {
                     ...p,
                     priceVal: priceVal,
@@ -1487,10 +1495,10 @@
                     area: p.area || 0,
                     title: p.title || 'Зар',
                     addr: p.address || p.district || 'Улаанбаатар',
-                    img: p.primary_image || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1200&q=80',
+                    img: primaryImg,
                     desc: p.description || 'Дэлгэрэнгүй мэдээлэл байхгүй.',
                     agent: p.owner_name || 'Нэргүй',
-                    avatar: p.owner_avatar || DEFAULT_AVATAR,
+                    avatar: ownerAvatar,
                     phone: p.owner_phone || '',
                     boost: p.boost_status === 'active',
                     role: p.owner_role || 'user',
@@ -1620,18 +1628,32 @@
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
-    window.openDetail = function(id) {
+    window.openDetail = async function(id) {
         const p = allProperties.find(x => x.id == id);
         if(!p) return;
 
         document.getElementById('detailModal').style.display = 'flex';
         
-        const images = [p.img, p.img.replace('w=1200', 'w=1201'), p.img.replace('w=1200', 'w=1202')];
         const slider = document.getElementById('modalSlider');
         const dots = document.getElementById('modalDots');
         
-        slider.innerHTML = images.map(img => `<div class="gallery-slide" style="background-image:url('${img}')"></div>`).join('');
-        dots.innerHTML = images.map((_, i) => `<div class="gallery-dot ${i===0?'active':''}" onclick="document.getElementById('modalSlider').scrollTo({left:${i}*document.getElementById('modalSlider').offsetWidth, behavior:'smooth'})"></div>`).join('');
+        const renderGallery = (imgList) => {
+            const mappedImages = imgList.map(img => {
+                if (img.startsWith('/uploads')) {
+                    return API_BASE.replace('/api', '') + img;
+                }
+                return img;
+            });
+            slider.innerHTML = mappedImages.map(img => `<div class="gallery-slide" style="background-image:url('${img}')"></div>`).join('');
+            dots.innerHTML = mappedImages.map((_, i) => `<div class="gallery-dot ${i===0?'active':''}" onclick="document.getElementById('modalSlider').scrollTo({left:${i}*document.getElementById('modalSlider').offsetWidth, behavior:'smooth'})"></div>`).join('');
+        };
+
+        // Initially show primary image or unsplash placeholders
+        const initialImages = p.img.includes('unsplash.com') ? 
+            [p.img, p.img.replace('w=1200', 'w=1201'), p.img.replace('w=1200', 'w=1202')] : 
+            [p.img];
+
+        renderGallery(initialImages);
         
         slider.onscroll = () => {
             const index = Math.round(slider.scrollLeft / slider.offsetWidth);
@@ -1657,6 +1679,24 @@
             </div>
         `;
         document.getElementById('modalDesc').innerText = p.desc;
+
+        // Fetch full listing details to get all uploaded images and latest description
+        try {
+            const res = await fetch(`${API_BASE}/listings/${id}`);
+            if (res.ok) {
+                const fullData = await res.json();
+                if (fullData.images && fullData.images.length > 0) {
+                    renderGallery(fullData.images);
+                } else if (fullData.primary_image) {
+                    renderGallery([fullData.primary_image]);
+                }
+                if (fullData.description) {
+                    document.getElementById('modalDesc').innerText = fullData.description;
+                }
+            }
+        } catch (err) {
+            console.warn("Failed to fetch full listing details:", err);
+        }
         
         document.getElementById('agentCard').innerHTML = `
             <div style="display:flex; align-items:center; gap:16px;">
