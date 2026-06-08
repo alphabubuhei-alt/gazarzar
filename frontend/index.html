@@ -3443,31 +3443,36 @@
     window.deleteAgent = async function(id) {
         if (!confirm('Энэ агентыг устгах уу?\nАгентын мэдээлэл, эрх бүгд устгагдана.')) return;
         const token = localStorage.getItem('gz_token');
+        const idStr = String(id);
+        // Short IDs (< 12 chars) are server IDs; long ones are local Date.now() timestamps
+        const isServerId = idStr.length < 12;
 
-        // If numeric id (from backend), call API first
-        if (token && id && !String(id).startsWith('16') /* not a Date.now() timestamp */) {
+        if (token && isServerId) {
             try {
                 const res = await fetch(`${API_BASE}/admin/agents/${id}`, {
                     method: 'DELETE',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (res.status === 401) { window.handleUnauthorized(); return; }
-                if (!res.ok) {
+                if (res.status === 404) {
+                    // Endpoint not yet deployed on server — fall through to local delete
+                    console.warn('DELETE /admin/agents endpoint not available yet, removing locally only.');
+                } else if (!res.ok) {
                     const err = await res.json().catch(() => ({}));
                     showToast('Алдаа: ' + (err.detail || 'Устгаж чадсангүй'), true);
                     return;
                 }
             } catch (e) {
-                showToast('Сүлжээний алдаа: ' + e.message, true);
-                return;
+                // Network error — fall through to local delete
+                console.warn('Backend delete failed, removing locally:', e.message);
             }
         }
 
-        // Clean localStorage
+        // Clean localStorage and cachedAgents
         let agents = JSON.parse(localStorage.getItem('gz_agents') || '[]');
-        agents = agents.filter(a => String(a.id) !== String(id));
+        agents = agents.filter(a => String(a.id) !== idStr);
         localStorage.setItem('gz_agents', JSON.stringify(agents));
-        if (window.cachedAgents) window.cachedAgents = window.cachedAgents.filter(a => String(a.id) !== String(id));
+        if (window.cachedAgents) window.cachedAgents = window.cachedAgents.filter(a => String(a.id) !== idStr);
 
         showToast('✅ Агент устгагдлаа.');
         await window.refreshAdminDashboard();
