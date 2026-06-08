@@ -1,5 +1,5 @@
 import os, uuid, tempfile
-import httpx
+import boto3
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
@@ -16,17 +16,28 @@ ALLOWED_TYPES = {
 }
 MAX_BYTES = settings.MAX_IMAGE_SIZE_MB * 1024 * 1024
 
-# ── Cloudflare Images setup ──────────────────────────────────────────────────
-USE_CF_IMAGES = bool(
-    settings.CF_ACCOUNT_ID
-    and settings.CF_IMAGES_API_TOKEN
-    and settings.CF_IMAGES_ACCOUNT_HASH
+# ── Cloudflare R2 setup ──────────────────────────────────────────────────────
+USE_R2 = bool(
+    settings.R2_ACCOUNT_ID
+    and settings.R2_ACCESS_KEY_ID
+    and settings.R2_SECRET_ACCESS_KEY
+    and settings.R2_PUBLIC_URL
 )
 
-CF_UPLOAD_URL = (
-    f"https://api.cloudflare.com/client/v4/accounts"
-    f"/{settings.CF_ACCOUNT_ID}/images/v1"
-)
+_r2_client = None
+
+def get_r2_client():
+    global _r2_client
+    if _r2_client is None:
+        _r2_client = boto3.client(
+            "s3",
+            endpoint_url=f"https://{settings.R2_ACCOUNT_ID}.r2.cloudflarestorage.com",
+            aws_access_key_id=settings.R2_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.R2_SECRET_ACCESS_KEY,
+            region_name="auto",
+        )
+    return _r2_client
+
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 def compress_image(path: str, max_width: int = 1200) -> None:
@@ -42,14 +53,10 @@ def compress_image(path: str, max_width: int = 1200) -> None:
         pass
 
 
-def upload_to_cf_images(content: bytes, filename: str,
-                         content_type: str, max_width: int = 1200) -> str:
-    """
-    Upload to Cloudflare Images API.
-    Returns: public delivery URL  (https://imagedelivery.net/{hash}/{id}/public)
-    """
-    # Compress image before uploading
-    suffix = os.path.splitext(filename)[1] or ".jpg"
+def upload_to_r2(content: bytes, key: str, content_type: str,
+                 max_width: int = 1200) -> str:
+    """Upload bytes to Cloudflare R2, return public URL."""
+    suffix = "." + key.rsplit(".", 1)[-1] if "." in key else ".jpg"
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
         tmp.write(content)
         tmp_path = tmp.name
@@ -58,52 +65,34 @@ def upload_to_cf_images(content: bytes, filename: str,
         if content_type.startswith("image/"):
             compress_image(tmp_path, max_width=max_width)
 
+        client = get_r2_client()
         with open(tmp_path, "rb") as f:
-            compressed = f.read()
+            client.upload_fileobj(
+                f,
+                settings.R2_BUCKET_NAME,
+                key,
+                ExtraArgs={"ContentType": content_type},
+            )
+
+        base = settings.R2_PUBLIC_URL.rstrip("/")
+        return f"{base}/{key}"
     finally:
         try:
             os.unlink(tmp_path)
         except Exception:
             pass
 
-    resp = httpx.post(
-        CF_UPLOAD_URL,
-        headers={"Authorization": f"Bearer {settings.CF_IMAGES_API_TOKEN}"},
-        files={"file": (filename, compressed, content_type)},
-        timeout=60,
-    )
 
-    if resp.status_code != 200:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Cloudflare Images upload failed: {resp.text[:200]}"
-        )
-
-    data = resp.json()
-    if not data.get("success"):
-        raise HTTPException(
-            status_code=502,
-            detail=f"Cloudflare Images error: {data.get('errors')}"
-        )
-
-    image_id = data["result"]["id"]
-    # Use the "public" variant — make sure you have a variant named "public"
-    # or use the first variant returned
-    variants = data["result"].get("variants", [])
-    if variants:
-        return variants[0]
-    return f"https://imagedelivery.net/{settings.CF_IMAGES_ACCOUNT_HASH}/{image_id}/public"
-
-
-def save_file_local(content: bytes, subfolder: str, filename: str) -> str:
-    """Fallback: local storage (only works until Render restarts)."""
+def save_file_local(content: bytes, subfolder: str, filename: str,
+                    content_type: str = "", max_width: int = 1200) -> str:
+    """Fallback: local storage (ephemeral on Render free tier)."""
     folder = os.path.join(settings.UPLOAD_DIR, subfolder)
     os.makedirs(folder, exist_ok=True)
     filepath = os.path.join(folder, filename)
     with open(filepath, "wb") as f:
         f.write(content)
-    if filename.lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
-        compress_image(filepath)
+    if content_type.startswith("image/"):
+        compress_image(filepath, max_width=max_width)
     return f"/uploads/{subfolder}/{filename}"
 
 
@@ -145,10 +134,11 @@ async def upload_images(
         ext = os.path.splitext(f.filename)[1].lower() or ".jpg"
         filename = f"{uuid.uuid4().hex}{ext}"
 
-        if USE_CF_IMAGES:
-            url = upload_to_cf_images(content, filename, f.content_type)
+        if USE_R2:
+            key = f"listings/{listing_id}/{filename}"
+            url = upload_to_r2(content, key, f.content_type)
         else:
-            url = save_file_local(content, str(listing_id), filename)
+            url = save_file_local(content, str(listing_id), filename, f.content_type)
 
         is_primary = existing_count == 0 and len(saved_urls) == 0
         order = existing_count + len(saved_urls)
@@ -181,10 +171,11 @@ async def upload_avatar(
     ext = os.path.splitext(file.filename)[1].lower() or ".jpg"
     filename = f"avatar_{current_user.id}_{uuid.uuid4().hex[:8]}{ext}"
 
-    if USE_CF_IMAGES:
-        url = upload_to_cf_images(content, filename, file.content_type, max_width=400)
+    if USE_R2:
+        key = f"avatars/{filename}"
+        url = upload_to_r2(content, key, file.content_type, max_width=400)
     else:
-        url = save_file_local(content, "avatars", filename)
+        url = save_file_local(content, "avatars", filename, file.content_type, max_width=400)
 
     # Update AgentProfile in DB
     from app.models.models import AgentProfile
