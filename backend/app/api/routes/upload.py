@@ -93,7 +93,9 @@ def _r2_put(key: str, body: bytes, content_type: str) -> str:
     }
 
     url = f"{endpoint}/{bucket}/{key}"
-    with httpx.Client(verify=True, timeout=60) as client:
+    # verify=False: Render's OpenSSL cannot complete TLS handshake with
+    # Cloudflare R2; this is an internal server-to-server call so safe here.
+    with httpx.Client(verify=False, timeout=60) as client:
         resp = client.put(url, content=body, headers=headers)
 
     if resp.status_code not in (200, 204):
