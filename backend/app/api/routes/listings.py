@@ -5,6 +5,7 @@ from typing import Optional
 from app.core.database import get_db
 from app.core.security import get_current_user, get_optional_user
 from app.models.models import Listing, ListingImage, SavedListing, User, ListingType, ListingStatus, BoostStatus
+from datetime import datetime, timezone
 
 router = APIRouter(prefix="/listings", tags=["listings"])
 
@@ -102,6 +103,7 @@ def listing_to_dict(l: Listing) -> dict:
         "owner_name": l.owner.name if (l.owner and l.owner.name) else (l.owner.phone if l.owner else None),
         "owner_role": l.owner.role.value if l.owner else "user",
         "owner_avatar": l.owner.agent_profile.avatar_url if (l.owner and l.owner.agent_profile) else None,
+        "created_at": l.created_at.replace(tzinfo=timezone.utc).isoformat() if l.created_at else None,
     }
 
 # ── Endpoints ─────────────────────────────────────────

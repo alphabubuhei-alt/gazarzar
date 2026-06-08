@@ -3016,10 +3016,10 @@
                 return new Date(u.created_at).toDateString() === now.toDateString();
             });
         } else if (adminUserFilter === 'week') {
-            const week = new Date(now - 7 * 86400000);
+            const week = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
             users = users.filter(u => u.created_at && new Date(u.created_at) >= week);
         } else if (adminUserFilter === 'month') {
-            const month = new Date(now - 30 * 86400000);
+            const month = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30);
             users = users.filter(u => u.created_at && new Date(u.created_at) >= month);
         }
 
