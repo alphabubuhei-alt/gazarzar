@@ -1,10 +1,10 @@
 import os
 from pathlib import Path
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
-from app.core.database import engine, Base
+from app.core.database import engine, Base, get_db
 from app.api.routes import auth, listings, agents, upload, payments, admin
 
 # Create all tables on startup
@@ -58,3 +58,13 @@ def serve_admin():
 @app.get("/health")
 def health():
     return {"status": "ok", "app": settings.APP_NAME, "version": settings.APP_VERSION}
+
+@app.get("/api/db-check")
+def db_check(db = Depends(get_db)):
+    from app.models.models import User, AgentProfile
+    users = db.query(User).all()
+    profiles = db.query(AgentProfile).all()
+    return {
+        "users": [{"id": u.id, "phone": u.phone, "name": u.name, "role": u.role.value if hasattr(u.role, "value") else str(u.role)} for u in users],
+        "profiles": [{"id": p.id, "user_id": p.user_id, "bio": p.bio} for p in profiles]
+    }
