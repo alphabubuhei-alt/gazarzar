@@ -25,6 +25,8 @@ USE_R2 = bool(
     and settings.R2_BUCKET_NAME
 )
 
+from botocore.config import Config
+
 _r2_client = None
 
 def get_r2_client():
@@ -35,6 +37,10 @@ def get_r2_client():
             endpoint_url=f"https://{settings.R2_ACCOUNT_ID}.r2.cloudflarestorage.com",
             aws_access_key_id=settings.R2_ACCESS_KEY_ID,
             aws_secret_access_key=settings.R2_SECRET_ACCESS_KEY,
+            config=Config(
+                signature_version="s3v4",
+                s3={"addressing_style": "path"}
+            ),
             region_name="auto",
         )
     return _r2_client
