@@ -1334,6 +1334,14 @@
         isLoggedIn = false;
         location.reload();
     };
+    // Auto-logout when server returns 401 (expired or invalid token)
+    window.handleUnauthorized = function() {
+        localStorage.removeItem('gz_token');
+        localStorage.removeItem('gz_phone');
+        isLoggedIn = false;
+        showToast('Нэвтрэх хугацаа дууссан. Дахин нэвтэрнэ үү.');
+        showLogin();
+    };
     window.showSearch = function() { document.getElementById('searchOverlay').style.display = 'flex'; };
     window.hideSearch = function() { document.getElementById('searchOverlay').style.display = 'none'; };
     
@@ -2106,6 +2114,7 @@
             showToast('Зар хадгалж байна...');
 
             const token = localStorage.getItem('gz_token');
+            if (!token) { window.handleUnauthorized(); return; }
             const priceVal = parseFloat(price);
 
             // 1. Create listing in backend
@@ -2128,6 +2137,11 @@
                 })
             });
 
+            if (listingResp.status === 401) {
+                hidePostAd();
+                window.handleUnauthorized();
+                return;
+            }
             if (!listingResp.ok) {
                 const errData = await listingResp.json();
                 throw new Error(errData.detail || 'Зар үүсгэхэд алдаа гарлаа.');
