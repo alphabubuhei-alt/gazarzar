@@ -30,10 +30,12 @@ class Settings(BaseSettings):
     TWILIO_AUTH_TOKEN: str = ""
     TWILIO_PHONE_NUMBER: str = ""
 
-    # Cloudflare Images - persistent image storage
-    CF_ACCOUNT_ID: str = ""          # Cloudflare Account ID
-    CF_IMAGES_API_TOKEN: str = ""    # API Token with Images:Edit permission
-    CF_IMAGES_ACCOUNT_HASH: str = "" # Account hash shown in Images dashboard
+    # Cloudflare R2 - persistent image storage
+    R2_ACCOUNT_ID: str = ""
+    R2_ACCESS_KEY_ID: str = ""
+    R2_SECRET_ACCESS_KEY: str = ""
+    R2_BUCKET_NAME: str = ""
+    R2_PUBLIC_URL: str = ""
 
     class Config:
         env_file = ".env"
