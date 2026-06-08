@@ -1,6 +1,6 @@
-import os, uuid, shutil, tempfile
+import os, uuid, tempfile
+import httpx
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
-from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import get_current_user
@@ -16,24 +16,19 @@ ALLOWED_TYPES = {
 }
 MAX_BYTES = settings.MAX_IMAGE_SIZE_MB * 1024 * 1024
 
-# ── Cloudinary setup ─────────────────────────────────────────────────────────
-USE_CLOUDINARY = bool(
-    settings.CLOUDINARY_CLOUD_NAME
-    and settings.CLOUDINARY_API_KEY
-    and settings.CLOUDINARY_API_SECRET
+# ── Cloudflare Images setup ──────────────────────────────────────────────────
+USE_CF_IMAGES = bool(
+    settings.CF_ACCOUNT_ID
+    and settings.CF_IMAGES_API_TOKEN
+    and settings.CF_IMAGES_ACCOUNT_HASH
 )
 
-if USE_CLOUDINARY:
-    import cloudinary
-    import cloudinary.uploader
-    cloudinary.config(
-        cloud_name=settings.CLOUDINARY_CLOUD_NAME,
-        api_key=settings.CLOUDINARY_API_KEY,
-        api_secret=settings.CLOUDINARY_API_SECRET,
-        secure=True,
-    )
+CF_UPLOAD_URL = (
+    f"https://api.cloudflare.com/client/v4/accounts"
+    f"/{settings.CF_ACCOUNT_ID}/images/v1"
+)
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# ── Helpers ──────────────────────────────────────────────────────────────────
 def compress_image(path: str, max_width: int = 1200) -> None:
     try:
         with Image.open(path) as img:
@@ -47,20 +42,13 @@ def compress_image(path: str, max_width: int = 1200) -> None:
         pass
 
 
-def save_file_local(content: bytes, subfolder: str, filename: str) -> str:
-    """Save to local uploads dir, return relative URL."""
-    folder = os.path.join(settings.UPLOAD_DIR, subfolder)
-    os.makedirs(folder, exist_ok=True)
-    filepath = os.path.join(folder, filename)
-    with open(filepath, "wb") as f:
-        f.write(content)
-    return f"/uploads/{subfolder}/{filename}"
-
-
-def upload_to_cloudinary(content: bytes, filename: str, content_type: str,
-                          folder: str, max_width: int = 1200) -> str:
-    """Upload bytes to Cloudinary, return secure URL."""
-    # Write to temp file so we can compress images first
+def upload_to_cf_images(content: bytes, filename: str,
+                         content_type: str, max_width: int = 1200) -> str:
+    """
+    Upload to Cloudflare Images API.
+    Returns: public delivery URL  (https://imagedelivery.net/{hash}/{id}/public)
+    """
+    # Compress image before uploading
     suffix = os.path.splitext(filename)[1] or ".jpg"
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
         tmp.write(content)
@@ -70,23 +58,56 @@ def upload_to_cloudinary(content: bytes, filename: str, content_type: str,
         if content_type.startswith("image/"):
             compress_image(tmp_path, max_width=max_width)
 
-        resource_type = "video" if content_type.startswith("video/") else "image"
-        result = cloudinary.uploader.upload(
-            tmp_path,
-            folder=f"gazarzar/{folder}",
-            resource_type=resource_type,
-            quality="auto",
-            fetch_format="auto",
-        )
-        return result["secure_url"]
+        with open(tmp_path, "rb") as f:
+            compressed = f.read()
     finally:
         try:
             os.unlink(tmp_path)
         except Exception:
             pass
 
+    resp = httpx.post(
+        CF_UPLOAD_URL,
+        headers={"Authorization": f"Bearer {settings.CF_IMAGES_API_TOKEN}"},
+        files={"file": (filename, compressed, content_type)},
+        timeout=60,
+    )
 
-# ── Endpoints ─────────────────────────────────────────────────────────────────
+    if resp.status_code != 200:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Cloudflare Images upload failed: {resp.text[:200]}"
+        )
+
+    data = resp.json()
+    if not data.get("success"):
+        raise HTTPException(
+            status_code=502,
+            detail=f"Cloudflare Images error: {data.get('errors')}"
+        )
+
+    image_id = data["result"]["id"]
+    # Use the "public" variant — make sure you have a variant named "public"
+    # or use the first variant returned
+    variants = data["result"].get("variants", [])
+    if variants:
+        return variants[0]
+    return f"https://imagedelivery.net/{settings.CF_IMAGES_ACCOUNT_HASH}/{image_id}/public"
+
+
+def save_file_local(content: bytes, subfolder: str, filename: str) -> str:
+    """Fallback: local storage (only works until Render restarts)."""
+    folder = os.path.join(settings.UPLOAD_DIR, subfolder)
+    os.makedirs(folder, exist_ok=True)
+    filepath = os.path.join(folder, filename)
+    with open(filepath, "wb") as f:
+        f.write(content)
+    if filename.lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
+        compress_image(filepath)
+    return f"/uploads/{subfolder}/{filename}"
+
+
+# ── Endpoints ────────────────────────────────────────────────────────────────
 
 @router.post("/listing/{listing_id}/images")
 async def upload_images(
@@ -102,7 +123,9 @@ async def upload_images(
     if not listing:
         raise HTTPException(status_code=404, detail="Зар олдсонгүй эсвэл эрх байхгүй")
 
-    existing_count = db.query(ListingImage).filter(ListingImage.listing_id == listing_id).count()
+    existing_count = db.query(ListingImage).filter(
+        ListingImage.listing_id == listing_id
+    ).count()
     if existing_count + len(files) > 10:
         raise HTTPException(status_code=400, detail="Дээд тал нь 10 медиа файл оруулах боломжтой")
 
@@ -110,27 +133,22 @@ async def upload_images(
 
     for f in files:
         if f.content_type not in ALLOWED_TYPES:
-            raise HTTPException(status_code=400, detail=f"{f.filename}: Файлын төрөл зөвшөөрөгдөхгүй")
+            raise HTTPException(status_code=400,
+                detail=f"{f.filename}: Файлын төрөл зөвшөөрөгдөхгүй")
 
         content = await f.read()
         limit = MAX_BYTES * 2 if f.content_type.startswith("video/") else MAX_BYTES
         if len(content) > limit:
-            raise HTTPException(status_code=400, detail=f"{f.filename}: Файлын хэмжээ хэтэрлээ")
+            raise HTTPException(status_code=400,
+                detail=f"{f.filename}: Файлын хэмжээ хэтэрлээ")
 
         ext = os.path.splitext(f.filename)[1].lower() or ".jpg"
         filename = f"{uuid.uuid4().hex}{ext}"
 
-        if USE_CLOUDINARY:
-            url = upload_to_cloudinary(
-                content, filename, f.content_type,
-                folder=f"listings/{listing_id}"
-            )
+        if USE_CF_IMAGES:
+            url = upload_to_cf_images(content, filename, f.content_type)
         else:
-            # Local fallback — compress then save
             url = save_file_local(content, str(listing_id), filename)
-            local_path = os.path.join(settings.UPLOAD_DIR, str(listing_id), filename)
-            if f.content_type.startswith("image/"):
-                compress_image(local_path)
 
         is_primary = existing_count == 0 and len(saved_urls) == 0
         order = existing_count + len(saved_urls)
@@ -138,7 +156,7 @@ async def upload_images(
             listing_id=listing_id,
             url=url,
             is_primary=is_primary,
-            order=order
+            order=order,
         )
         db.add(img_obj)
         saved_urls.append(url)
@@ -161,18 +179,12 @@ async def upload_avatar(
         raise HTTPException(status_code=400, detail="Файлын хэмжээ хэтэрлээ")
 
     ext = os.path.splitext(file.filename)[1].lower() or ".jpg"
-    filename = f"{current_user.id}_{uuid.uuid4().hex[:8]}{ext}"
+    filename = f"avatar_{current_user.id}_{uuid.uuid4().hex[:8]}{ext}"
 
-    if USE_CLOUDINARY:
-        url = upload_to_cloudinary(
-            content, filename, file.content_type,
-            folder="avatars", max_width=400
-        )
+    if USE_CF_IMAGES:
+        url = upload_to_cf_images(content, filename, file.content_type, max_width=400)
     else:
         url = save_file_local(content, "avatars", filename)
-        local_path = os.path.join(settings.UPLOAD_DIR, "avatars", filename)
-        if file.content_type.startswith("image/"):
-            compress_image(local_path, max_width=400)
 
     # Update AgentProfile in DB
     from app.models.models import AgentProfile
