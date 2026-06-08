@@ -191,6 +191,16 @@
             display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
             gap: 16px; padding: 0 24px 140px;
         }
+        @media (min-width: 768px) {
+            .listing-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+        @media (min-width: 1200px) {
+            .listing-grid {
+                grid-template-columns: repeat(6, 1fr);
+            }
+        }
         .property-card {
             background: var(--bg-card); border-radius: var(--radius-md);
             overflow: hidden; border: 1px solid var(--border);
@@ -341,6 +351,7 @@
         /* ── POST AD WIZARD (Premium Minimalist) ── */
         .post-ad-card {
             background: var(--bg-card); width: 95%; max-width: 500px;
+            max-height: 92dvh; max-height: 92vh;
             border-radius: var(--radius-lg); overflow: hidden;
             display: flex; flex-direction: column; box-shadow: var(--shadow-lg);
             animation: slideUp 0.4s ease;
@@ -365,7 +376,7 @@
             background: var(--primary); color: white; border-color: var(--primary);
             box-shadow: 0 4px 10px rgba(28,43,58,0.2);
         }
-        .post-body { padding: 32px; flex: 1; overflow-y: auto; }
+        .post-body { padding: 32px; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
         .step-content { display: none; }
         .step-content.active { display: block; animation: fadeIn 0.3s ease; }
         
@@ -474,6 +485,7 @@
 
         .post-footer {
             padding: 24px 32px; display: flex; gap: 16px; border-top: 1px solid var(--border);
+            flex-shrink: 0; background: var(--bg-card);
         }
 
         /* ── MAP MARKERS (Zillow Style) ────────── */
