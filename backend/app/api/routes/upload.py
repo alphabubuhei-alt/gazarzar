@@ -1,5 +1,5 @@
-import os, uuid, tempfile
-import boto3
+import os, uuid, tempfile, hashlib, hmac, datetime
+import httpx
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
@@ -25,25 +25,85 @@ USE_R2 = bool(
     and settings.R2_BUCKET_NAME
 )
 
-from botocore.config import Config
+# ── AWS Signature V4 helpers ─────────────────────────────────────────────────
+def _sign(key: bytes, msg: str) -> bytes:
+    return hmac.new(key, msg.encode("utf-8"), hashlib.sha256).digest()
 
-_r2_client = None
+def _get_signature_key(secret: str, date_stamp: str, region: str, service: str) -> bytes:
+    k_date    = _sign(("AWS4" + secret).encode("utf-8"), date_stamp)
+    k_region  = _sign(k_date, region)
+    k_service = _sign(k_region, service)
+    k_signing = _sign(k_service, "aws4_request")
+    return k_signing
 
-def get_r2_client():
-    global _r2_client
-    if _r2_client is None:
-        _r2_client = boto3.client(
-            "s3",
-            endpoint_url=f"https://{settings.R2_ACCOUNT_ID}.r2.cloudflarestorage.com",
-            aws_access_key_id=settings.R2_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.R2_SECRET_ACCESS_KEY,
-            config=Config(
-                signature_version="s3v4",
-                s3={"addressing_style": "path"}
-            ),
-            region_name="auto",
+def _r2_put(key: str, body: bytes, content_type: str) -> str:
+    """PUT an object to Cloudflare R2 via raw HTTPS + SigV4. Returns public URL."""
+    region      = "auto"
+    service     = "s3"
+    bucket      = settings.R2_BUCKET_NAME
+    account_id  = settings.R2_ACCOUNT_ID
+    host        = f"{account_id}.r2.cloudflarestorage.com"
+    endpoint    = f"https://{host}"
+
+    now         = datetime.datetime.utcnow()
+    amz_date    = now.strftime("%Y%m%dT%H%M%SZ")
+    date_stamp  = now.strftime("%Y%m%d")
+
+    payload_hash = hashlib.sha256(body).hexdigest()
+
+    # ── Canonical request ────────────────────────────────────────────────────
+    canonical_uri     = f"/{bucket}/{key}"
+    canonical_qs      = ""
+    canonical_headers = (
+        f"content-type:{content_type}\n"
+        f"host:{host}\n"
+        f"x-amz-content-sha256:{payload_hash}\n"
+        f"x-amz-date:{amz_date}\n"
+    )
+    signed_headers = "content-type;host;x-amz-content-sha256;x-amz-date"
+    canonical_request = "\n".join([
+        "PUT", canonical_uri, canonical_qs,
+        canonical_headers, signed_headers, payload_hash
+    ])
+
+    # ── String to sign ───────────────────────────────────────────────────────
+    credential_scope = f"{date_stamp}/{region}/{service}/aws4_request"
+    string_to_sign = "\n".join([
+        "AWS4-HMAC-SHA256", amz_date, credential_scope,
+        hashlib.sha256(canonical_request.encode("utf-8")).hexdigest()
+    ])
+
+    # ── Signature ────────────────────────────────────────────────────────────
+    signing_key = _get_signature_key(
+        settings.R2_SECRET_ACCESS_KEY, date_stamp, region, service
+    )
+    signature = hmac.new(signing_key, string_to_sign.encode("utf-8"), hashlib.sha256).hexdigest()
+
+    # ── Authorization header ─────────────────────────────────────────────────
+    authorization = (
+        f"AWS4-HMAC-SHA256 Credential={settings.R2_ACCESS_KEY_ID}/{credential_scope}, "
+        f"SignedHeaders={signed_headers}, Signature={signature}"
+    )
+
+    headers = {
+        "Content-Type":        content_type,
+        "x-amz-date":          amz_date,
+        "x-amz-content-sha256": payload_hash,
+        "Authorization":       authorization,
+    }
+
+    url = f"{endpoint}/{bucket}/{key}"
+    with httpx.Client(verify=True, timeout=60) as client:
+        resp = client.put(url, content=body, headers=headers)
+
+    if resp.status_code not in (200, 204):
+        raise HTTPException(
+            status_code=502,
+            detail=f"R2 upload failed [{resp.status_code}]: {resp.text[:200]}"
         )
-    return _r2_client
+
+    base = settings.R2_PUBLIC_URL.rstrip("/")
+    return f"{base}/{key}"
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -60,39 +120,36 @@ def compress_image(path: str, max_width: int = 1200) -> None:
         pass
 
 
-def upload_to_r2(content: bytes, key: str, content_type: str,
-                 max_width: int = 1200) -> str:
-    """Upload bytes to Cloudflare R2, return public URL."""
-    suffix = "." + key.rsplit(".", 1)[-1] if "." in key else ".jpg"
+def _compress_bytes(content: bytes, content_type: str,
+                    max_width: int = 1200, suffix: str = ".jpg") -> tuple[bytes, str]:
+    """Compress image bytes. Returns (compressed_bytes, actual_content_type)."""
+    if not content_type.startswith("image/"):
+        return content, content_type
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
         tmp.write(content)
         tmp_path = tmp.name
-
     try:
-        if content_type.startswith("image/"):
-            compress_image(tmp_path, max_width=max_width)
-
-        client = get_r2_client()
+        compress_image(tmp_path, max_width=max_width)
         with open(tmp_path, "rb") as f:
-            client.upload_fileobj(
-                f,
-                settings.R2_BUCKET_NAME,
-                key,
-                ExtraArgs={"ContentType": content_type},
-            )
-
-        base = settings.R2_PUBLIC_URL.rstrip("/")
-        return f"{base}/{key}"
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Cloudflare R2 Upload failed: {str(e)}"
-        )
+            return f.read(), "image/jpeg"
     finally:
         try:
             os.unlink(tmp_path)
         except Exception:
             pass
+
+
+def upload_to_r2(content: bytes, key: str, content_type: str,
+                 max_width: int = 1200) -> str:
+    """Compress if needed then PUT to Cloudflare R2. Returns public URL."""
+    suffix = "." + key.rsplit(".", 1)[-1] if "." in key else ".jpg"
+    content, content_type = _compress_bytes(content, content_type, max_width, suffix)
+    try:
+        return _r2_put(key, content, content_type)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"R2 upload error: {e}")
 
 
 def save_file_local(content: bytes, subfolder: str, filename: str,
