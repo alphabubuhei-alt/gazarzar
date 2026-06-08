@@ -1395,6 +1395,16 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     const API_BASE = "https://gazarzar.onrender.com/api";
+    
+    function normalizePhone(p) {
+        if (!p) return '';
+        let s = String(p).replace(/\D/g, '');
+        if (s.startsWith('976') && s.length === 11) {
+            s = s.slice(3);
+        }
+        return s;
+    }
+
     let heroMap, postMap, markersGroup, postMarker;
     let isLoggedIn = false;
     let selectedLatLng = null;
@@ -2401,10 +2411,16 @@
                 if (data.items && Array.isArray(data.items)) agents = data.items;
                 else if (Array.isArray(data)) agents = data;
 
-                // Merge API agents with locally-added ones, avoiding duplication by phone number
-                const apiPhones = new Set(agents.map(a => String(a.phone).trim()));
-                const uniqueLocal = localAgents.filter(a => a.phone && !apiPhones.has(String(a.phone).trim()));
-                const merged = [...uniqueLocal, ...agents];
+                // Merge API agents with locally-added ones, avoiding duplication by phone number and id
+                const apiPhones = new Set(agents.map(a => normalizePhone(a.phone)));
+                const apiIds = new Set(agents.map(a => String(a.id || '')));
+                const uniqueLocal = localAgents.filter(a => {
+                    if (!a.phone && !a.id) return false;
+                    if (a.id && apiIds.has(String(a.id))) return false;
+                    if (a.phone && apiPhones.has(normalizePhone(a.phone))) return false;
+                    return true;
+                });
+                const merged = [...agents, ...uniqueLocal]; // API first, local fallback
                 window.cachedAgents = merged;
                 if (merged.length === 0) {
                     grid.innerHTML = '<div class="no-results" style="grid-column:1/-1; padding:40px; text-align:center;"><h3>Агент олдсонгүй</h3><p style="color:#999; margin-top:8px;">Одоогоор бүртгэлтэй агент байхгүй байна.</p></div>';
@@ -2639,8 +2655,8 @@
         const isAdmin = userPhone === ADMIN_PHONE;
 
         const localAgents = JSON.parse(localStorage.getItem('gz_agents') || '[]');
-        const isAgent = (window.cachedAgents || []).find(a => String(a.phone) === String(userPhone)) 
-                      || localAgents.find(a => String(a.phone) === String(userPhone));
+        const isAgent = (window.cachedAgents || []).find(a => normalizePhone(a.phone) === normalizePhone(userPhone)) 
+                      || localAgents.find(a => normalizePhone(a.phone) === normalizePhone(userPhone));
 
         if (isAgent) {
             let avatar = isAgent.image || isAgent.avatar_url || DEFAULT_AVATAR;
@@ -2760,8 +2776,8 @@
         const container = document.getElementById('profileContent');
         const userPhone = localStorage.getItem('gz_phone');
         const localAgents = JSON.parse(localStorage.getItem('gz_agents') || '[]');
-        const isAgent = (window.cachedAgents || []).find(a => String(a.phone) === String(userPhone)) 
-                      || localAgents.find(a => String(a.phone) === String(userPhone));
+        const isAgent = (window.cachedAgents || []).find(a => normalizePhone(a.phone) === normalizePhone(userPhone)) 
+                      || localAgents.find(a => normalizePhone(a.phone) === normalizePhone(userPhone));
                       
         if (!isAgent) return;
         
@@ -2920,7 +2936,7 @@
 
         // 3. Update in local storage agents
         let localAgents = JSON.parse(localStorage.getItem('gz_agents') || '[]');
-        const idx = localAgents.findIndex(a => String(a.phone) === String(userPhone));
+        const idx = localAgents.findIndex(a => normalizePhone(a.phone) === normalizePhone(userPhone));
         if (idx !== -1) {
             localAgents[idx] = {
                 ...localAgents[idx],
@@ -2932,7 +2948,7 @@
                 image: finalAvatarUrl || localAgents[idx].image
             };
         } else {
-            const isAgent = (window.cachedAgents || []).find(a => String(a.phone) === String(userPhone)) || {};
+            const isAgent = (window.cachedAgents || []).find(a => normalizePhone(a.phone) === normalizePhone(userPhone)) || {};
             localAgents.push({
                 id: isAgent.id || Date.now(),
                 name: name,
@@ -2952,7 +2968,7 @@
 
         // 4. Update window.cachedAgents
         if (!window.cachedAgents) window.cachedAgents = [];
-        const cIdx = window.cachedAgents.findIndex(a => String(a.phone) === String(userPhone));
+        const cIdx = window.cachedAgents.findIndex(a => normalizePhone(a.phone) === normalizePhone(userPhone));
         if (cIdx !== -1) {
             window.cachedAgents[cIdx] = {
                 ...window.cachedAgents[cIdx],
@@ -2972,7 +2988,7 @@
         let listings = JSON.parse(localStorage.getItem('gz_local_listings') || '[]');
         let updatedListings = false;
         listings.forEach(p => {
-            if (String(p.phone) === String(userPhone)) {
+            if (normalizePhone(p.phone) === normalizePhone(userPhone)) {
                 p.agent = name;
                 updatedListings = true;
             }
@@ -2998,18 +3014,18 @@
 
         // 1. Remove from localStorage agents
         let localAgents = JSON.parse(localStorage.getItem('gz_agents') || '[]');
-        localAgents = localAgents.filter(a => String(a.phone) !== String(userPhone));
+        localAgents = localAgents.filter(a => normalizePhone(a.phone) !== normalizePhone(userPhone));
         localStorage.setItem('gz_agents', JSON.stringify(localAgents));
 
         // 2. Remove from cachedAgents in memory
         if (window.cachedAgents) {
-            window.cachedAgents = window.cachedAgents.filter(a => String(a.phone) !== String(userPhone));
+            window.cachedAgents = window.cachedAgents.filter(a => normalizePhone(a.phone) !== normalizePhone(userPhone));
         }
 
         // 3. Revert agent's listings back to normal user listings
         let listings = JSON.parse(localStorage.getItem('gz_local_listings') || '[]');
         listings.forEach(p => {
-            if (String(p.phone) === String(userPhone)) {
+            if (normalizePhone(p.phone) === normalizePhone(userPhone)) {
                 p.role = 'user';
             }
         });
