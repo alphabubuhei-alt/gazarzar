@@ -26,6 +26,7 @@ class TokenResponse(BaseModel):
     user_id: int
     phone: str
     name: str | None
+    role: str
 
 # ── Helpers ──────────────────────────────────────────
 def normalize_phone(phone: str) -> str:
@@ -169,14 +170,24 @@ async def verify_otp(body: VerifyOTPRequest, db: Session = Depends(get_db)):
     db.refresh(user)
 
     token = create_access_token({"sub": user.phone, "user_id": user.id})
-    return TokenResponse(access_token=token, user_id=user.id, phone=user.phone, name=user.name)
+    return TokenResponse(access_token=token, user_id=user.id, phone=user.phone, name=user.name, role=user.role.value)
 
 
+
+from app.core.security import get_current_user
 
 @router.get("/me")
-async def get_me(db: Session = Depends(get_db)):
+async def get_me(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """Returns current user info - requires auth token"""
-    pass
+    return {
+        "id": current_user.id,
+        "phone": current_user.phone,
+        "name": current_user.name,
+        "role": current_user.role.value
+    }
 
 
 # ── Simple phone login (no OTP) ───────────────────────
@@ -206,4 +217,4 @@ async def phone_login(body: PhoneLoginRequest, db: Session = Depends(get_db)):
         db.refresh(user)
 
     token = create_access_token({"sub": user.phone, "user_id": user.id})
-    return TokenResponse(access_token=token, user_id=user.id, phone=user.phone, name=user.name)
+    return TokenResponse(access_token=token, user_id=user.id, phone=user.phone, name=user.name, role=user.role.value)

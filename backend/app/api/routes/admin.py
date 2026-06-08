@@ -144,3 +144,38 @@ def get_users(
             "created_at": u.created_at.replace(tzinfo=timezone.utc).isoformat() if hasattr(u, 'created_at') and u.created_at else None,
         })
     return {"users": result, "total": len(result)}
+
+
+from pydantic import BaseModel
+class RoleUpdate(BaseModel):
+    role: str
+
+@router.post("/users/{user_id}/set-role")
+def set_user_role(
+    user_id: int,
+    body: RoleUpdate,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_current_admin_user)
+):
+    from app.models.models import UserRole
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Хэрэглэгч олдсонгүй")
+    
+    if body.role == "agent":
+        user.role = UserRole.agent
+        # Check or create AgentProfile
+        profile = db.query(AgentProfile).filter(AgentProfile.user_id == user.id).first()
+        if not profile:
+            profile = AgentProfile(user_id=user.id, bio="", badge="new")
+            db.add(profile)
+    elif body.role == "admin":
+        user.role = UserRole.admin
+    else:
+        user.role = UserRole.user
+        # Delete AgentProfile if user downgraded
+        db.query(AgentProfile).filter(AgentProfile.user_id == user.id).delete()
+
+    db.commit()
+    return {"message": "Хэрэглэгчийн эрх өөрчлөгдлөө", "role": user.role.value}

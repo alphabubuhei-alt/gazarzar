@@ -233,11 +233,12 @@
         .card-heart:hover { transform: scale(1.1); background: white; }
 
         /* Card Types */
-        .property-card.card-gold { border: 2px solid var(--accent); box-shadow: 0 0 20px rgba(212,195,163,0.3); }
-        .property-card.card-blue { border: 1px solid #3498db; }
-        .tag-gold { background: var(--accent) !important; color: white !important; }
-        .tag-blue { background: #3498db !important; color: white !important; }
-        .tag-green { background: #2ecc71 !important; color: white !important; }
+        .property-card.card-gold { border: 2px solid #ffb300; box-shadow: 0 4px 20px rgba(255, 179, 0, 0.15); }
+        .property-card.card-blue { border: 2px solid #2563eb; box-shadow: 0 4px 20px rgba(37, 99, 235, 0.15); }
+        .property-card.card-green { border: 2px solid #10b981; box-shadow: 0 4px 20px rgba(16, 185, 129, 0.15); }
+        .tag-gold { background: #ffb300 !important; color: white !important; }
+        .tag-blue { background: #2563eb !important; color: white !important; }
+        .tag-green { background: #10b981 !important; color: white !important; }
 
         /* ── DETAIL MODAL SLIDER ───────────────── */
         .gallery-container {
@@ -1309,6 +1310,7 @@
             isLoggedIn = true;
             localStorage.setItem('gz_token', data.access_token);
             localStorage.setItem('gz_phone', data.phone);
+            localStorage.setItem('gz_role', data.role || 'user');
             showToast('Амжилттай нэвтэрлээ!');
             hideLogin();
             checkAuth();
@@ -1319,13 +1321,25 @@
         });
     };
 
-    window.checkAuth = function() {
+    window.checkAuth = async function() {
         const token = localStorage.getItem('gz_token');
         if (token) {
             isLoggedIn = true;
             const headerAuth = document.getElementById('headerAuth');
             if (headerAuth) headerAuth.innerHTML = `<div class="header-icon-btn" onclick="logout()"><i data-lucide="log-out"></i></div>`;
             lucide.createIcons();
+            // Refresh role from server
+            try {
+                const meRes = await fetch(`${API_BASE}/auth/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (meRes.ok) {
+                    const me = await meRes.json();
+                    localStorage.setItem('gz_role', me.role || 'user');
+                } else if (meRes.status === 401) {
+                    window.handleUnauthorized();
+                }
+            } catch(e) {}
         }
     };
     window.logout = function() {
@@ -2465,10 +2479,9 @@
 
         // Contact buttons in dedicated container (prevents duplicates on re-open)
         const phone = agent.phone || '';
-        document.getElementById('profileAgentContact').innerHTML = `
-            <a href="tel:${phone}" style="flex:1;background:var(--primary);color:white;padding:14px 20px;border-radius:14px;text-decoration:none;font-weight:700;font-size:14px;text-align:center;display:block;">📞 ${phone||'Залгах'}</a>
-            <button style="flex:1;background:white;border:1.5px solid var(--border);color:var(--primary);padding:14px 20px;border-radius:14px;font-weight:700;font-size:14px;cursor:pointer;">💬 Мессеж</button>
-        `;
+        document.getElementById('profileAgentContact').innerHTML = phone ? `
+            <a href="tel:${phone}" style="flex:1;background:var(--primary);color:white;padding:14px 20px;border-radius:14px;text-decoration:none;font-weight:700;font-size:14px;text-align:center;display:block;">📞 ${phone}</a>
+        ` : '';
 
         // listings belonging to this agent
         const agentListings = agent.listings || allProperties.filter(p => p.agent === agent.name);
@@ -3111,9 +3124,15 @@
                 }
             }
             const isNew = u.created_at && (now - parseSafeDate(u.created_at)) < 86400000;
-            const roleColor = u.role === 'admin' ? '#ff4757' : u.role === 'agent' ? '#3b82f6' : '#888';
-            const roleName = u.role === 'admin' ? '🔑 Admin' : u.role === 'agent' ? '👔 Agent' : '👤 User';
-            return `<div style="background:white; padding:14px 16px; border-radius:14px; border:1px solid var(--border);
+            const roleColor = u.role === 'admin' ? '#ff4757' : u.role === 'agent' ? '#2563eb' : u.role === 'agent_pending' ? '#f59e0b' : '#888';
+            const roleName = u.role === 'admin' ? '🔑 Admin' : u.role === 'agent' ? '👔 Агент' : u.role === 'agent_pending' ? '⏳ Хүсэлт' : '👤 Хэрэглэгч';
+            const roleActions = u.role !== 'admin' ? `
+                <div style="display:flex; gap:6px; flex-shrink:0;">
+                    ${u.role === 'agent_pending' ? `<button onclick="adminSetRole(${u.id},'agent')" style="background:#2563eb; color:white; border:none; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer;">✅ Агент болгох</button>` : ''}
+                    ${u.role === 'agent' ? `<button onclick="adminSetRole(${u.id},'user')" style="background:#f3f4f6; color:#666; border:none; padding:6px 10px; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer;">Буцаах</button>` : ''}
+                    ${u.role === 'user' ? `<button onclick="adminSetRole(${u.id},'agent')" style="background:#e0e7ff; color:#2563eb; border:none; padding:6px 10px; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer;">Агент болгох</button>` : ''}
+                </div>` : '';
+            return `<div style="background:white; padding:14px 16px; border-radius:14px; border:1px solid ${u.role==='agent_pending'?'#fbbf24':'var(--border)'};
                                 display:flex; align-items:center; gap:14px;">
                 <div style="width:40px; height:40px; border-radius:50%;
                             background:linear-gradient(135deg, var(--primary), var(--primary-light));
@@ -3122,16 +3141,19 @@
                     ${(u.name || u.phone || '?').charAt(0).toUpperCase()}
                 </div>
                 <div style="flex:1; min-width:0;">
-                    <div style="display:flex; align-items:center; gap:8px;">
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                         <span style="font-weight:700; font-size:14px; color:var(--primary);">${u.name || '—'}</span>
                         ${isNew ? '<span style="background:#dcfce7; color:#16a34a; font-size:10px; font-weight:700; padding:2px 7px; border-radius:8px;">Шинэ</span>' : ''}
                         <span style="background:${roleColor}22; color:${roleColor}; font-size:10px; font-weight:700; padding:2px 7px; border-radius:8px;">${roleName}</span>
                     </div>
                     <div style="font-size:12px; color:var(--text-muted); margin-top:3px;">📞 ${u.phone || '—'} · 🏠 ${u.listings_count||0} зар</div>
                 </div>
-                <div style="text-align:right; flex-shrink:0;">
-                    <div style="font-size:12px; font-weight:700; color:var(--primary);">${dateStr}</div>
-                    <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${timeStr}</div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="text-align:right; flex-shrink:0;">
+                        <div style="font-size:12px; font-weight:700; color:var(--primary);">${dateStr}</div>
+                        <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${timeStr}</div>
+                    </div>
+                    ${roleActions}
                 </div>
             </div>`;
         }).join('');
@@ -3186,8 +3208,8 @@
         document.getElementById('statTotalUsers').innerText = totalUsers;
         document.getElementById('statDailyLogins').innerText = Math.max(1, Math.floor(totalUsers * 0.15));
 
-        // Requests (from localStorage)
-        const reqs = JSON.parse(localStorage.getItem('gz_agent_requests') || '[]');
+        // Requests (agent_pending users from backend)
+        const reqs = (window.cachedAdminUsers || []).filter(u => u.role === 'agent_pending');
 
         // Badge on tab
         const badge = document.getElementById('agentReqBadge');
@@ -3201,44 +3223,45 @@
             reqContainer.innerHTML = reqs.length === 0
                 ? '<p style="color:#999; font-size:13px; padding:12px;">Одоогоор хүсэлт байхгүй байна.</p>'
                 : reqs.map(r => `
-                <div style="background:white; padding:14px 16px; border-radius:14px; border:1.5px solid #ffc107;
+                <div style="background:white; padding:14px 16px; border-radius:14px; border:1.5px solid #fbbf24;
                             display:flex; align-items:center; gap:14px;">
                     <div style="width:40px; height:40px; border-radius:50%; flex-shrink:0;
-                                background:url('${r.image || DEFAULT_AVATAR}') center/cover;"></div>
+                                background:linear-gradient(135deg,#667eea,#764ba2); display:flex; align-items:center; justify-content:center;
+                                color:white; font-weight:800; font-size:16px;">${(r.name||r.phone||'?').charAt(0).toUpperCase()}</div>
                     <div style="flex:1;">
-                        <div style="font-weight:700; font-size:14px; color:var(--primary);">${r.name}</div>
-                        <div style="font-size:12px; color:var(--text-muted);">${r.company||'Компани тодорхойгүй'} · ${r.phone}</div>
-                        ${r.bio ? `<div style="font-size:11px; color:#999; margin-top:2px;">${r.bio}</div>` : ''}
+                        <div style="font-weight:700; font-size:14px; color:var(--primary);">${r.name || '—'}</div>
+                        <div style="font-size:12px; color:var(--text-muted);">📞 ${r.phone || '—'} · 🏠 ${r.listings_count||0} зар</div>
                     </div>
                     <div style="display:flex; gap:6px; flex-shrink:0;">
-                        <button style="background:var(--primary); color:white; border:none; padding:8px 14px;
+                        <button style="background:#2563eb; color:white; border:none; padding:8px 14px;
                                        border-radius:8px; font-size:11px; font-weight:700; cursor:pointer;"
-                                onclick="approveAgent('${r.id}')">✅ Батлах</button>
+                                onclick="adminSetRole(${r.id},'agent')">✅ Батлах</button>
                         <button style="background:#fff5f5; color:#ff4757; border:none; padding:8px 12px;
                                        border-radius:8px; font-size:11px; font-weight:700; cursor:pointer;"
-                                onclick="rejectRequest('${r.id}')">❌</button>
+                                onclick="adminSetRole(${r.id},'user')">❌</button>
                     </div>
                 </div>`).join('');
         }
 
-        // Render registered agents
-        const localAgents = JSON.parse(localStorage.getItem('gz_agents') || '[]');
+        // Render registered agents (from backend)
+        const registeredAgents = (window.cachedAdminUsers || []).filter(u => u.role === 'agent');
         const agentContainer = document.getElementById('adminAgentsTable');
         if (agentContainer) {
-            agentContainer.innerHTML = localAgents.length === 0
+            agentContainer.innerHTML = registeredAgents.length === 0
                 ? '<p style="color:#999; font-size:13px; padding:12px;">Бүртгэлтэй агент байхгүй байна.</p>'
-                : localAgents.map(a => `
-                <div style="background:white; padding:14px 16px; border-radius:14px; border:1px solid var(--border);
+                : registeredAgents.map(a => `
+                <div style="background:white; padding:14px 16px; border-radius:14px; border:2px solid #2563eb22;
                             display:flex; align-items:center; gap:14px;">
                     <div style="width:40px; height:40px; border-radius:50%; flex-shrink:0;
-                                background:url('${a.image||DEFAULT_AVATAR}') center/cover;"></div>
+                                background:linear-gradient(135deg,#2563eb,#60a5fa); display:flex; align-items:center; justify-content:center;
+                                color:white; font-weight:800; font-size:16px;">${(a.name||a.phone||'?').charAt(0).toUpperCase()}</div>
                     <div style="flex:1;">
-                        <div style="font-weight:700; font-size:14px; color:var(--primary);">${a.name}</div>
-                        <div style="font-size:12px; color:var(--text-muted);">${a.company||''} · ${a.phone||''}</div>
+                        <div style="font-weight:700; font-size:14px; color:var(--primary);">${a.name || '—'}</div>
+                        <div style="font-size:12px; color:#2563eb; font-weight:700;">📞 ${a.phone || '—'} · 🏠 ${a.listings_count||0} зар</div>
                     </div>
                     <button style="background:#fff5f5; color:#ff4757; border:none; padding:7px 12px;
                                    border-radius:8px; font-size:11px; font-weight:700; cursor:pointer;"
-                            onclick="deleteAgent(${a.id})">🗑 Устгах</button>
+                            onclick="adminSetRole(${a.id},'user')">🗑 Устгах</button>
                 </div>`).join('');
         }
 
@@ -3365,17 +3388,27 @@
         showToast(`Агент ${data.name} амжилттай нэмэгдлээ!`);
     }
 
-    window.submitAgentRequest = function() {
+    window.submitAgentRequest = async function() {
         const name = document.getElementById('reqName').value;
         const company = document.getElementById('reqCompany').value;
         const bio = document.getElementById('reqBio').value;
-        const phone = localStorage.getItem('gz_phone');
+        const token = localStorage.getItem('gz_token');
 
         if (!name) { showToast('Нэрээ оруулна уу!'); return; }
+        if (!token) { window.handleUnauthorized(); return; }
 
-        const reqs = JSON.parse(localStorage.getItem('gz_agent_requests') || '[]');
-        reqs.push({ id: Date.now().toString(), name, company, bio, phone });
-        localStorage.setItem('gz_agent_requests', JSON.stringify(reqs));
+        try {
+            const res = await fetch(`${API_BASE}/agents/apply`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ name, company, bio })
+            });
+            if (res.status === 401) { window.handleUnauthorized(); return; }
+            if (!res.ok) throw new Error('Хүсэлт илгээхэд алдаа гарлаа');
+        } catch(e) {
+            showToast('Алдаа: ' + e.message, true);
+            return;
+        }
 
         document.getElementById('agentRequestForm').innerHTML = `
             <div style="text-align:center; padding:20px;">
@@ -3409,33 +3442,32 @@
         reader.readAsDataURL(file);
     };
 
-    window.approveAgent = function(reqId) {
-        let reqs = JSON.parse(localStorage.getItem('gz_agent_requests') || '[]');
-        const req = reqs.find(r => r.id === reqId);
-        if (req) {
-            const agentData = {
-                name: req.name,
-                company: req.company,
-                phone: req.phone,
-                bio: req.bio,
-                image: req.image || DEFAULT_AVATAR,
-                districts: [req.address || 'Улаанбаатар']
-            };
-            addAgentToList(agentData);
-            reqs = reqs.filter(r => r.id !== reqId);
-            localStorage.setItem('gz_agent_requests', JSON.stringify(reqs));
-            renderAdminDashboard();
+    window.adminSetRole = async function(userId, role) {
+        const token = localStorage.getItem('gz_token');
+        if (!token) return;
+        const action = role === 'agent' ? 'Агент болгох' : (role === 'user' ? 'Буцаах' : role);
+        if (!confirm(`Энэ хэрэглэгчийг ${action} уу?`)) return;
+        try {
+            const res = await fetch(`${API_BASE}/admin/users/${userId}/set-role`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ role })
+            });
+            if (!res.ok) throw new Error('Эрх өөрчлөхөд алдаа гарлаа');
+            showToast(role === 'agent' ? '✅ Агент болголлоо!' : '✅ Хэрэглэгч болголлоо!');
+            // Refresh admin data
+            await window.refreshAdminDashboard();
+        } catch(e) {
+            showToast('Алдаа: ' + e.message, true);
         }
     };
 
+    window.approveAgent = function(reqId) {
+        window.adminSetRole(reqId, 'agent');
+    };
+
     window.rejectRequest = function(reqId) {
-        if (confirm('Энэ хүсэлтийг цуцлах уу?')) {
-            let reqs = JSON.parse(localStorage.getItem('gz_agent_requests') || '[]');
-            reqs = reqs.filter(r => r.id !== reqId);
-            localStorage.setItem('gz_agent_requests', JSON.stringify(reqs));
-            renderAdminDashboard();
-            showToast('Хүсэлтийг цуцаллаа.');
-        }
+        window.adminSetRole(reqId, 'user');
     };
 
 

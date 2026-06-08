@@ -48,3 +48,33 @@ def get_agent(agent_id: int, db: Session = Depends(get_db)):
                 "primary_image": primary
             })
     return data
+
+
+from pydantic import BaseModel
+from typing import Optional
+from app.core.security import get_current_user
+
+class AgentApplyRequest(BaseModel):
+    name: Optional[str] = None
+    company: Optional[str] = None
+    bio: Optional[str] = None
+
+@router.post("/apply")
+def apply_agent(
+    body: AgentApplyRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    from app.models.models import UserRole
+    current_user.role = UserRole.agent_pending
+    if body.name:
+        current_user.name = body.name
+    # Create or update profile
+    profile = db.query(AgentProfile).filter(AgentProfile.user_id == current_user.id).first()
+    if not profile:
+        profile = AgentProfile(user_id=current_user.id, bio=body.bio, badge="new")
+        db.add(profile)
+    else:
+        profile.bio = body.bio
+    db.commit()
+    return {"message": "Агент болох хүсэлт илгээгдлээ"}

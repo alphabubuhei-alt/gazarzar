@@ -8,6 +8,7 @@ class UserRole(str, enum.Enum):
     user = "user"
     agent = "agent"
     admin = "admin"
+    agent_pending = "agent_pending"
 
 class ListingType(str, enum.Enum):
     sale = "sale"
