@@ -675,6 +675,52 @@
                 grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
             }
         }
+
+        /* Location Autocomplete suggestions dropdown styles */
+        .search-suggestions-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            max-height: 220px;
+            overflow-y: auto;
+            z-index: 1000;
+            margin-top: 4px;
+        }
+        .suggestion-item {
+            padding: 10px 14px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--primary);
+            border-bottom: 1px solid #f5f5f5;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+        .suggestion-item:hover {
+            background: #f8f9fa;
+        }
+        .suggestion-item .icon {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+        .suggestion-item .desc {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-left: auto;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 140px;
+        }
     </style>
 </head>
 <body>
@@ -1038,8 +1084,11 @@
             <div class="step-content active" id="step-1">
                 <div class="form-group">
                     <label>Байршил сонгох</label>
-                    <div style="display:flex; gap:10px; margin-bottom:12px;">
-                        <input type="text" id="postAddressSearch" placeholder="Хаяг хайх (Зайсан, СБД...)" style="border-radius:12px;">
+                    <div style="position:relative; display:flex; gap:10px; margin-bottom:12px; flex:1; width:100%;">
+                        <div style="position:relative; flex:1;">
+                            <input type="text" id="postAddressSearch" placeholder="Хаяг хайх (Зайсан, СБД...)" style="border-radius:12px; width:100%;" autocomplete="off">
+                            <div id="postAddressSuggestions" class="search-suggestions-dropdown" style="display:none;"></div>
+                        </div>
                         <button class="btn-post" onclick="searchPostLoc()" style="padding:0 20px; width:auto; font-size:12px;">ХАЙХ</button>
                     </div>
                     <div id="postMap" style="height:280px; border-radius:18px; border:1px solid #eee; z-index:1;"></div>
@@ -1806,7 +1855,8 @@
         const q = document.getElementById('postAddressSearch').value;
         if (!q) return;
         try {
-            const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`);
+            // Also restrict the manual button search to Mongolia
+            const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&countrycodes=mn&q=${encodeURIComponent(rtsTransliterateQuery(q))}`);
             const d = await r.json();
             if (d && d.length > 0) {
                 const loc = [parseFloat(d[0].lat), parseFloat(d[0].lon)];
@@ -1821,6 +1871,150 @@
             }
         } catch(e) {}
     };
+
+    // Helper for manual search transliteration if user typed in Latin
+    function rtsTransliterateQuery(q) {
+        if (typeof normalizeUBQuery === 'function') {
+            return normalizeUBQuery(q).transliterated || q;
+        }
+        return q;
+    }
+
+    let suggestionsAbortController = null;
+    
+    window.showAddressSuggestions = async function(val) {
+        const postAddressSuggestions = document.getElementById('postAddressSuggestions');
+        if (!postAddressSuggestions) return;
+        
+        const norm = typeof normalizeUBQuery === 'function' ? normalizeUBQuery(val) : { original: val, transliterated: val };
+        const queryOriginal = norm.original.toLowerCase();
+        const queryTrans = norm.transliterated.toLowerCase();
+        
+        let matches = [];
+        
+        // 1. Search in local UB_LANDMARKS
+        if (typeof UB_LANDMARKS !== 'undefined') {
+            for (const landmark of UB_LANDMARKS) {
+                let matched = false;
+                for (const name of landmark.names) {
+                    const normalizedName = name.toLowerCase();
+                    if (normalizedName.includes(queryOriginal) || normalizedName.includes(queryTrans)) {
+                        matched = true;
+                        break;
+                    }
+                }
+                if (matched) {
+                    matches.push({
+                        name: landmark.names[1] || landmark.names[0], // Prefer Cyrillic name
+                        lat: landmark.lat,
+                        lng: landmark.lng,
+                        type: 'landmark',
+                        desc: 'Онцлох газар'
+                    });
+                }
+            }
+        }
+        
+        // Render local matches immediately so it feels instant
+        renderSuggestions(matches);
+        
+        // Cancel any pending Nominatim requests
+        if (suggestionsAbortController) {
+            suggestionsAbortController.abort();
+        }
+        suggestionsAbortController = new AbortController();
+        
+        // 2. Fetch from Nominatim (restricted to Mongolia)
+        try {
+            const searchQ = queryTrans;
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&countrycodes=mn&q=${encodeURIComponent(searchQ)}&limit=5`, {
+                signal: suggestionsAbortController.signal
+            });
+            const osmData = await res.json();
+            
+            if (osmData && osmData.length > 0) {
+                osmData.forEach(item => {
+                    const lat = parseFloat(item.lat);
+                    const lng = parseFloat(item.lon);
+                    
+                    const parts = item.display_name.split(',');
+                    const name = parts[0].trim();
+                    const desc = parts.slice(1, 4).map(p => p.trim()).join(', ') || 'Монгол Улс';
+                    
+                    const isDuplicate = matches.some(m => Math.abs(m.lat - lat) < 0.0005 && Math.abs(m.lng - lng) < 0.0005);
+                    
+                    if (!isDuplicate) {
+                        matches.push({
+                            name: name,
+                            lat: lat,
+                            lng: lng,
+                            type: 'osm',
+                            desc: desc
+                        });
+                    }
+                });
+            }
+            
+            // Re-render with merged results
+            renderSuggestions(matches);
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                console.warn('OSM autocomplete fetch error:', err);
+            }
+        }
+    };
+    
+    function renderSuggestions(matches) {
+        const postAddressSuggestions = document.getElementById('postAddressSuggestions');
+        if (!postAddressSuggestions) return;
+        
+        if (matches.length === 0) {
+            postAddressSuggestions.style.display = 'none';
+            return;
+        }
+        
+        postAddressSuggestions.innerHTML = matches.map(m => `
+            <div class="suggestion-item" data-lat="${m.lat}" data-lng="${m.lng}" data-name="${m.name.replace(/"/g, '&quot;')}">
+                <span class="icon">📍</span>
+                <div style="display:flex; flex-direction:column; overflow:hidden; text-align:left; flex:1;">
+                    <span style="font-weight:600; font-size:13px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap; color:var(--primary);">${m.name}</span>
+                    <span style="font-size:10px; color:var(--text-muted); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${m.desc}</span>
+                </div>
+            </div>
+        `).join('');
+        
+        postAddressSuggestions.style.display = 'block';
+        
+        postAddressSuggestions.querySelectorAll('.suggestion-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const lat = parseFloat(this.getAttribute('data-lat'));
+                const lng = parseFloat(this.getAttribute('data-lng'));
+                const name = this.getAttribute('data-name');
+                selectSuggestion(lat, lng, name);
+            });
+        });
+    }
+    
+    function selectSuggestion(lat, lng, name) {
+        const postAddressSearch = document.getElementById('postAddressSearch');
+        const postAddressSuggestions = document.getElementById('postAddressSuggestions');
+        
+        if (postAddressSearch) postAddressSearch.value = name;
+        if (postAddressSuggestions) postAddressSuggestions.style.display = 'none';
+        
+        const loc = [lat, lng];
+        if (postMap) {
+            postMap.setView(loc, 15);
+            if (postMarker) postMap.removeLayer(postMarker);
+            postMarker = L.marker(loc).addTo(postMap);
+        }
+        selectedLatLng = { lat: lat, lng: lng };
+        
+        const coordsInput = document.getElementById('coordsInput');
+        if (coordsInput) {
+            coordsInput.value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        }
+    }
     window.nextStep = function() {
         if (currentStep === 1 && !selectedLatLng) { showToast('Байршил сонгоно уу!'); return; }
         if (currentStep === 2) {
@@ -3240,6 +3434,47 @@
                 const hint = document.getElementById('postPriceHint');
                 if (hint) {
                     hint.innerText = window.formatPriceToWords(e.target.value);
+                }
+            });
+        }
+
+        // Setup autocomplete for post address search
+        const postAddressSearch = document.getElementById('postAddressSearch');
+        const postAddressSuggestions = document.getElementById('postAddressSuggestions');
+        let addressSearchTimeout = null;
+
+        if (postAddressSearch) {
+            postAddressSearch.addEventListener('input', function(e) {
+                const val = e.target.value.trim();
+                if (addressSearchTimeout) clearTimeout(addressSearchTimeout);
+                
+                if (!val) {
+                    if (postAddressSuggestions) postAddressSuggestions.style.display = 'none';
+                    return;
+                }
+                
+                addressSearchTimeout = setTimeout(() => {
+                    if (window.showAddressSuggestions) {
+                        window.showAddressSuggestions(val);
+                    }
+                }, 300);
+            });
+            
+            // Hide dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (postAddressSuggestions && !postAddressSearch.contains(e.target) && !postAddressSuggestions.contains(e.target)) {
+                    postAddressSuggestions.style.display = 'none';
+                }
+            });
+
+            // Allow search when Enter is pressed
+            postAddressSearch.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (window.searchPostLoc) {
+                        window.searchPostLoc();
+                    }
+                    if (postAddressSuggestions) postAddressSuggestions.style.display = 'none';
                 }
             });
         }
