@@ -22,6 +22,7 @@ USE_R2 = bool(
     and settings.R2_ACCESS_KEY_ID
     and settings.R2_SECRET_ACCESS_KEY
     and settings.R2_PUBLIC_URL
+    and settings.R2_BUCKET_NAME
 )
 
 _r2_client = None
@@ -76,6 +77,11 @@ def upload_to_r2(content: bytes, key: str, content_type: str,
 
         base = settings.R2_PUBLIC_URL.rstrip("/")
         return f"{base}/{key}"
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Cloudflare R2 Upload failed: {str(e)}"
+        )
     finally:
         try:
             os.unlink(tmp_path)
