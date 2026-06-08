@@ -67,6 +67,18 @@ def serve_admin():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "app": settings.APP_NAME, "version": settings.APP_VERSION}
+    import os
+    is_mount = False
+    try:
+        is_mount = os.path.ismount("/data/uploads")
+    except Exception:
+        pass
+    return {
+        "status": "ok", 
+        "app": settings.APP_NAME, 
+        "version": settings.APP_VERSION,
+        "is_mount": is_mount,
+        "upload_dir": settings.UPLOAD_DIR
+    }
 
 
