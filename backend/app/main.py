@@ -59,3 +59,12 @@ def serve_admin():
 def health():
     return {"status": "ok", "app": settings.APP_NAME, "version": settings.APP_VERSION}
 
+@app.exception_handler(Exception)
+async def debug_exception_handler(request, exc):
+    import traceback
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
+        status_code=500,
+        content={"error": str(exc), "traceback": traceback.format_exc()}
+    )
+
