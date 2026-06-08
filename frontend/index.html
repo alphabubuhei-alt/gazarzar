@@ -2956,55 +2956,36 @@
         }
 
         // 3. Update in local storage agents
+        // Remove ALL entries matching current user's phone first (prevents any duplicates),
+        // then add a single fresh entry.
         let localAgents = JSON.parse(localStorage.getItem('gz_agents') || '[]');
-        localAgents = deduplicateAgents(localAgents);
-        const idx = localAgents.findIndex(a => normalizePhone(a.phone) === normalizePhone(userPhone));
-        if (idx !== -1) {
-            localAgents[idx] = {
-                ...localAgents[idx],
-                name: name,
-                company: company || 'Бие даасан агент',
-                bio: bio,
-                years_exp: parseInt(yearsExp) || 0,
-                districts: districtsArray,
-                image: finalAvatarUrl || localAgents[idx].image
-            };
-        } else {
-            const isAgent = (window.cachedAgents || []).find(a => normalizePhone(a.phone) === normalizePhone(userPhone)) || {};
-            localAgents.push({
-                id: isAgent.id || Date.now(),
-                name: name,
-                company: company || 'Бие даасан агент',
-                phone: userPhone,
-                bio: bio,
-                years_exp: parseInt(yearsExp) || 0,
-                districts: districtsArray,
-                image: finalAvatarUrl || isAgent.image || isAgent.avatar_url || DEFAULT_AVATAR,
-                listings_count: isAgent.listings_count || 0,
-                total_sales: isAgent.total_sales || 0,
-                rating: isAgent.rating || '5.0',
-                badge: isAgent.badge || 'verified'
-            });
-        }
+        const existingEntry = localAgents.find(a => normalizePhone(a.phone) === normalizePhone(userPhone));
+        const cachedEntry = (window.cachedAgents || []).find(a => normalizePhone(a.phone) === normalizePhone(userPhone)) || {};
+        const baseEntry = existingEntry || cachedEntry;
+        // Remove all stale entries for this user
+        localAgents = localAgents.filter(a => normalizePhone(a.phone) !== normalizePhone(userPhone));
+        // Add single updated entry
+        localAgents.push({
+            id: baseEntry.id || Date.now(),
+            name: name,
+            company: company || 'Бие даасан агент',
+            phone: userPhone,
+            bio: bio,
+            years_exp: parseInt(yearsExp) || 0,
+            districts: districtsArray,
+            image: finalAvatarUrl || baseEntry.image || baseEntry.avatar_url || DEFAULT_AVATAR,
+            avatar_url: finalAvatarUrl || baseEntry.avatar_url || baseEntry.image || DEFAULT_AVATAR,
+            listings_count: baseEntry.listings_count || 0,
+            total_sales: baseEntry.total_sales || 0,
+            rating: baseEntry.rating || '5.0',
+            badge: baseEntry.badge || 'verified'
+        });
         localStorage.setItem('gz_agents', JSON.stringify(localAgents));
 
-        // 4. Update window.cachedAgents
+        // 4. Update window.cachedAgents — remove stale, add fresh
         if (!window.cachedAgents) window.cachedAgents = [];
-        const cIdx = window.cachedAgents.findIndex(a => normalizePhone(a.phone) === normalizePhone(userPhone));
-        if (cIdx !== -1) {
-            window.cachedAgents[cIdx] = {
-                ...window.cachedAgents[cIdx],
-                name: name,
-                company: company || 'Бие даасан агент',
-                bio: bio,
-                years_exp: parseInt(yearsExp) || 0,
-                districts: districtsArray,
-                image: finalAvatarUrl || window.cachedAgents[cIdx].image || window.cachedAgents[cIdx].avatar_url,
-                avatar_url: finalAvatarUrl || window.cachedAgents[cIdx].avatar_url || window.cachedAgents[cIdx].image
-            };
-        } else {
-            window.cachedAgents.push(localAgents[localAgents.length - 1]);
-        }
+        window.cachedAgents = window.cachedAgents.filter(a => normalizePhone(a.phone) !== normalizePhone(userPhone));
+        window.cachedAgents.push(localAgents[localAgents.length - 1]);
 
         // 5. Update agent name in local listings to match new name
         let listings = JSON.parse(localStorage.getItem('gz_local_listings') || '[]');
