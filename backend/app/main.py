@@ -10,6 +10,16 @@ from app.api.routes import auth, listings, agents, upload, payments, admin
 # Create all tables on startup
 Base.metadata.create_all(bind=engine)
 
+# Alter Enum in PostgreSQL to include agent_pending role
+from sqlalchemy import text
+with engine.connect() as connection:
+    try:
+        connection.execution_options(isolation_level="AUTOCOMMIT").execute(
+            text("ALTER TYPE userrole ADD VALUE IF NOT EXISTS 'agent_pending';")
+        )
+    except Exception as e:
+        pass
+
 # Get the path to index.html relative to this file
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 FRONTEND_PATH = BASE_DIR / "frontend" / "index.html"
@@ -59,12 +69,4 @@ def serve_admin():
 def health():
     return {"status": "ok", "app": settings.APP_NAME, "version": settings.APP_VERSION}
 
-@app.exception_handler(Exception)
-async def debug_exception_handler(request, exc):
-    import traceback
-    from fastapi.responses import JSONResponse
-    return JSONResponse(
-        status_code=500,
-        content={"error": str(exc), "traceback": traceback.format_exc()}
-    )
 
