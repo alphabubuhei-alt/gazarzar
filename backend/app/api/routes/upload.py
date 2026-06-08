@@ -1,4 +1,4 @@
-import os, uuid, tempfile, hashlib, hmac, datetime
+import os, uuid, tempfile, hashlib, hmac, datetime, logging
 import httpx
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -207,7 +207,11 @@ async def upload_images(
 
         if USE_R2:
             key = f"listings/{listing_id}/{filename}"
-            url = upload_to_r2(content, key, f.content_type)
+            try:
+                url = upload_to_r2(content, key, f.content_type)
+            except Exception as e:
+                logging.error(f"R2 upload failed, falling back to local: {e}", exc_info=True)
+                url = save_file_local(content, str(listing_id), filename, f.content_type)
         else:
             url = save_file_local(content, str(listing_id), filename, f.content_type)
 
@@ -244,7 +248,11 @@ async def upload_avatar(
 
     if USE_R2:
         key = f"avatars/{filename}"
-        url = upload_to_r2(content, key, file.content_type, max_width=400)
+        try:
+            url = upload_to_r2(content, key, file.content_type, max_width=400)
+        except Exception as e:
+            logging.error(f"R2 avatar upload failed, falling back to local: {e}", exc_info=True)
+            url = save_file_local(content, "avatars", filename, file.content_type, max_width=400)
     else:
         url = save_file_local(content, "avatars", filename, file.content_type, max_width=400)
 
