@@ -101,6 +101,7 @@ def listing_to_dict(l: Listing) -> dict:
         "view_count": l.view_count,
         "primary_image": primary,
         "owner_name": l.owner.name if (l.owner and l.owner.name) else (l.owner.phone if l.owner else None),
+        "owner_phone": l.owner.phone if l.owner else None,
         "owner_role": l.owner.role.value if l.owner else "user",
         "owner_avatar": l.owner.agent_profile.avatar_url if (l.owner and l.owner.agent_profile) else None,
         "created_at": l.created_at.replace(tzinfo=timezone.utc).isoformat() if l.created_at else None,

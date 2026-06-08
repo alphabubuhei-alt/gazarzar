@@ -801,6 +801,19 @@ function setUserFilter(f) {
 }
 
 function renderUsers() {
+    function parseSafeDate(dateStr) {
+        if (!dateStr) return new Date(NaN);
+        if (dateStr instanceof Date) return dateStr;
+        let cleaned = dateStr.replace(/\.(\d{3})\d+/, '.$1');
+        cleaned = cleaned.replace(/\+00:00$/, 'Z');
+        let d = new Date(cleaned);
+        if (isNaN(d.getTime())) {
+            cleaned = cleaned.replace('T', ' ').replace('Z', '').split('.')[0];
+            d = new Date(cleaned);
+        }
+        return d;
+    }
+
     let users = adminData.users || [];
     const now = new Date();
 
@@ -808,15 +821,15 @@ function renderUsers() {
     if (userFilter === 'today') {
         users = users.filter(u => {
             if (!u.created_at) return false;
-            const d = new Date(u.created_at);
+            const d = parseSafeDate(u.created_at);
             return d.toDateString() === now.toDateString();
         });
     } else if (userFilter === 'week') {
         const week = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-        users = users.filter(u => u.created_at && new Date(u.created_at) >= week);
+        users = users.filter(u => u.created_at && parseSafeDate(u.created_at) >= week);
     } else if (userFilter === 'month') {
         const month = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30);
-        users = users.filter(u => u.created_at && new Date(u.created_at) >= month);
+        users = users.filter(u => u.created_at && parseSafeDate(u.created_at) >= month);
     }
 
     document.getElementById('userCount').textContent = users.length;
@@ -841,13 +854,13 @@ function renderUsers() {
                 user:  `<span class="badge badge-gray">👤 User</span>`,
             };
             const badge = roleMap[u.role] || `<span class="badge badge-gray">${u.role}</span>`;
-            const dateStr = u.created_at ? new Date(u.created_at).toLocaleDateString('mn-MN', {
+            const dateStr = u.created_at ? parseSafeDate(u.created_at).toLocaleDateString('mn-MN', {
                 year:'numeric', month:'2-digit', day:'2-digit'
             }) : '—';
-            const timeStr = u.created_at ? new Date(u.created_at).toLocaleTimeString('mn-MN', {
+            const timeStr = u.created_at ? parseSafeDate(u.created_at).toLocaleTimeString('mn-MN', {
                 hour:'2-digit', minute:'2-digit'
             }) : '—';
-            const isNew = u.created_at && (now - new Date(u.created_at)) < 86400000;
+            const isNew = u.created_at && (now - parseSafeDate(u.created_at)) < 86400000;
             return `<tr>
                 <td class="time-cell">#${u.id}</td>
                 <td><strong>${esc(u.name||'—')}</strong>${isNew ? ' <span class="badge badge-green" style="font-size:10px">Шинэ</span>' : ''}</td>
