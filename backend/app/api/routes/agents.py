@@ -24,12 +24,12 @@ def agent_to_dict(a: AgentProfile) -> dict:
 
 @router.get("/")
 def get_agents(db: Session = Depends(get_db)):
-    agents = db.query(AgentProfile).all()
+    agents = db.query(AgentProfile).join(User).filter(User.role == "agent").all()
     return {"items": [agent_to_dict(a) for a in agents]}
 
 @router.get("/{agent_id}")
 def get_agent(agent_id: int, db: Session = Depends(get_db)):
-    a = db.query(AgentProfile).filter(AgentProfile.id == agent_id).first()
+    a = db.query(AgentProfile).join(User).filter(AgentProfile.id == agent_id, User.role == "agent").first()
     if not a:
         raise HTTPException(status_code=404, detail="Агент олдсонгүй")
     data = agent_to_dict(a)

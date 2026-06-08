@@ -33,6 +33,7 @@ class ListingOut(BaseModel):
     primary_image: Optional[str] = None
     owner_name: Optional[str] = None
     owner_role: Optional[str] = "user"
+    owner_agent_profile_id: Optional[int] = None
 
     class Config:
         from_attributes = True
@@ -104,6 +105,7 @@ def listing_to_dict(l: Listing) -> dict:
         "owner_phone": l.owner.phone if l.owner else None,
         "owner_role": l.owner.role.value if l.owner else "user",
         "owner_avatar": l.owner.agent_profile.avatar_url if (l.owner and l.owner.agent_profile) else None,
+        "owner_agent_profile_id": l.owner.agent_profile.id if (l.owner and l.owner.agent_profile and l.owner.role.value == "agent") else None,
         "created_at": l.created_at.replace(tzinfo=timezone.utc).isoformat() if l.created_at else None,
     }
 

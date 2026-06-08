@@ -20,7 +20,7 @@ def get_admin_stats(
     boosted_listings = db.query(Listing).filter(Listing.boost_status == BoostStatus.active).count()
     
     total_users = db.query(User).count()
-    total_agents = db.query(AgentProfile).count()
+    total_agents = db.query(AgentProfile).join(User).filter(User.role == "agent").count()
     
     # Revenue this month
     now = datetime.now(timezone.utc)
@@ -44,7 +44,7 @@ def get_admin_stats(
         })
 
     # 3. Agents
-    agents_query = db.query(AgentProfile).all()
+    agents_query = db.query(AgentProfile).join(User).filter(User.role == "agent").all()
     agents_data = []
     for a in agents_query:
         agents_data.append({
