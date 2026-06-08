@@ -78,3 +78,38 @@ def apply_agent(
         profile.bio = body.bio
     db.commit()
     return {"message": "Агент болох хүсэлт илгээгдлээ"}
+
+
+class AgentProfileUpdate(BaseModel):
+    name: Optional[str] = None
+    bio: Optional[str] = None
+    years_exp: Optional[int] = None
+    districts: Optional[list[str]] = None
+
+@router.put("/profile")
+def update_agent_profile(
+    body: AgentProfileUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    from app.models.models import UserRole
+    if current_user.role not in (UserRole.agent, UserRole.agent_pending):
+        raise HTTPException(status_code=403, detail="Зөвхөн агент профайлаа засах боломжтой")
+    
+    if body.name is not None:
+        current_user.name = body.name
+        
+    profile = db.query(AgentProfile).filter(AgentProfile.user_id == current_user.id).first()
+    if not profile:
+        profile = AgentProfile(user_id=current_user.id, bio="", badge="new")
+        db.add(profile)
+        
+    if body.bio is not None:
+        profile.bio = body.bio
+    if body.years_exp is not None:
+        profile.years_exp = body.years_exp
+    if body.districts is not None:
+        profile.districts = ",".join([d.strip() for d in body.districts if d.strip()])
+        
+    db.commit()
+    return {"message": "Профайл амжилттай шинэчлэгдлээ"}

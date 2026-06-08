@@ -74,3 +74,45 @@ async def upload_images(
 
     db.commit()
     return {"uploaded": len(saved_urls), "urls": saved_urls}
+
+
+@router.post("/avatar")
+async def upload_avatar(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if file.content_type not in ALLOWED_TYPES:
+        raise HTTPException(status_code=400, detail="Файлын төрөл зөвшөөрөгдөхгүй")
+    
+    content = await file.read()
+    if len(content) > MAX_BYTES:
+        raise HTTPException(status_code=400, detail="Файлын хэмжээ хэтэрлээ")
+    
+    # Save folder
+    folder = os.path.join(settings.UPLOAD_DIR, "avatars")
+    os.makedirs(folder, exist_ok=True)
+    
+    ext = os.path.splitext(file.filename)[1].lower()
+    if not ext: ext = ".jpg"
+    filename = f"{current_user.id}_{uuid.uuid4().hex[:8]}{ext}"
+    filepath = os.path.join(folder, filename)
+    
+    with open(filepath, "wb") as out:
+        out.write(content)
+        
+    if file.content_type.startswith("image/"):
+        compress_image(filepath, max_width=400) # Avatars can be smaller
+        
+    url = f"/uploads/avatars/{filename}"
+    
+    # Also update in DB directly
+    from app.models.models import AgentProfile
+    profile = db.query(AgentProfile).filter(AgentProfile.user_id == current_user.id).first()
+    if not profile:
+        profile = AgentProfile(user_id=current_user.id, bio="", badge="new")
+        db.add(profile)
+    profile.avatar_url = url
+    db.commit()
+    
+    return {"url": url}

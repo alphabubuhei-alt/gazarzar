@@ -2363,7 +2363,10 @@
             a.badge === 'verified' ? '<span style="background:#28a745;color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;">✔ Баталгаажсан</span>' :
             a.badge === 'new' ? '<span style="background:#007bff;color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;">🆕 Шинэ</span>' : '';
         
-        const avatar = a.avatar_url || a.image || DEFAULT_AVATAR;
+        let avatar = a.avatar_url || a.image || DEFAULT_AVATAR;
+        if (avatar.startsWith('/uploads')) {
+            avatar = API_BASE.replace('/api', '') + avatar;
+        }
         const districtStr = Array.isArray(a.districts) ? a.districts.join(', ') : (a.districts || '');
         
         return `<div onclick="openAgentProfile(${a.id})" style="background:white;border-radius:16px;padding:24px;box-shadow:var(--shadow-sm);border:1px solid var(--border);display:flex;align-items:center;gap:20px;cursor:pointer;transition:0.2s;" onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 10px 20px rgba(0,0,0,0.1)';" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='var(--shadow-sm)';">
@@ -2398,8 +2401,10 @@
                 if (data.items && Array.isArray(data.items)) agents = data.items;
                 else if (Array.isArray(data)) agents = data;
 
-                // Merge API agents with locally-added ones
-                const merged = [...localAgents, ...agents];
+                // Merge API agents with locally-added ones, avoiding duplication by phone number
+                const apiPhones = new Set(agents.map(a => String(a.phone).trim()));
+                const uniqueLocal = localAgents.filter(a => a.phone && !apiPhones.has(String(a.phone).trim()));
+                const merged = [...uniqueLocal, ...agents];
                 window.cachedAgents = merged;
                 if (merged.length === 0) {
                     grid.innerHTML = '<div class="no-results" style="grid-column:1/-1; padding:40px; text-align:center;"><h3>Агент олдсонгүй</h3><p style="color:#999; margin-top:8px;">Одоогоор бүртгэлтэй агент байхгүй байна.</p></div>';
@@ -2439,7 +2444,10 @@
             if (r.ok) agent = await r.json();
         } catch(e) {}
 
-        const avatar = agent.avatar_url || agent.image || DEFAULT_AVATAR;
+        let avatar = agent.avatar_url || agent.image || DEFAULT_AVATAR;
+        if (avatar.startsWith('/uploads')) {
+            avatar = API_BASE.replace('/api', '') + avatar;
+        }
         const badgeHtml = agent.badge === 'top' ? '<span style="background:#ffc107;color:#000;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;">⭐ ТОП</span>' :
             agent.badge === 'verified' ? '<span style="background:#28a745;color:#fff;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;">✔ Баталгаажсан</span>' : '';
         const districtStr = Array.isArray(agent.districts) ? agent.districts.join(', ') : (agent.districts || '');
@@ -2635,7 +2643,10 @@
                       || localAgents.find(a => String(a.phone) === String(userPhone));
 
         if (isAgent) {
-            const avatar = isAgent.image || isAgent.avatar_url || DEFAULT_AVATAR;
+            let avatar = isAgent.image || isAgent.avatar_url || DEFAULT_AVATAR;
+            if (avatar.startsWith('/uploads')) {
+                avatar = API_BASE.replace('/api', '') + avatar;
+            }
             const districtStr = Array.isArray(isAgent.districts) ? isAgent.districts.join(', ') : (isAgent.districts || 'Улаанбаатар');
             container.innerHTML = `
                 <div style="background:white; padding:32px; border-radius:24px; border:1px solid var(--border); margin-top:20px; display:flex; flex-direction:column; gap:24px;">
@@ -2754,7 +2765,10 @@
                       
         if (!isAgent) return;
         
-        const avatar = isAgent.image || isAgent.avatar_url || DEFAULT_AVATAR;
+        let avatar = isAgent.image || isAgent.avatar_url || DEFAULT_AVATAR;
+        if (avatar.startsWith('/uploads')) {
+            avatar = API_BASE.replace('/api', '') + avatar;
+        }
         const districts = Array.isArray(isAgent.districts) ? isAgent.districts.join(', ') : (isAgent.districts || 'Улаанбаатар');
         editedAgentPhotoBase64 = isAgent.image || isAgent.avatar_url;
 
@@ -2831,8 +2845,9 @@
         reader.readAsDataURL(file);
     };
 
-    window.saveAgentProfileChanges = function() {
+    window.saveAgentProfileChanges = async function() {
         const userPhone = localStorage.getItem('gz_phone');
+        const token = localStorage.getItem('gz_token');
         const name = document.getElementById('editAgentName').value.trim();
         const company = document.getElementById('editAgentCompany').value.trim();
         const districtsInput = document.getElementById('editAgentDistricts').value.trim();
@@ -2841,9 +2856,67 @@
 
         if (!name) { showToast('Нэрээ заавал оруулна уу!'); return; }
 
-        const districtsArray = districtsInput ? districtsInput.split(',').map(d => d.trim()).filter(Boolean) : [];
+        showToast('Хадгалж байна...');
 
-        // 1. Update in local storage agents
+        const districtsArray = districtsInput ? districtsInput.split(',').map(d => d.trim()).filter(Boolean) : [];
+        let finalAvatarUrl = editedAgentPhotoBase64 || '';
+
+        function dataURLtoFile(dataurl, filename) {
+            var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+                bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+            while(n--){
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new File([u8arr], filename, {type:mime});
+        }
+
+        // Check if there is an active session to sync to backend
+        if (token) {
+            try {
+                // 1. Upload avatar if selected new photo (base64)
+                if (editedAgentPhotoBase64 && editedAgentPhotoBase64.startsWith('data:')) {
+                    const fileObj = dataURLtoFile(editedAgentPhotoBase64, 'avatar.jpg');
+                    const formData = new FormData();
+                    formData.append('file', fileObj);
+
+                    const uploadRes = await fetch(`${API_BASE}/upload/avatar`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` },
+                        body: formData
+                    });
+                    if (uploadRes.ok) {
+                        const uploadData = await uploadRes.json();
+                        finalAvatarUrl = uploadData.url;
+                    } else {
+                        console.error("Failed to upload avatar to backend");
+                    }
+                }
+
+                // 2. Put profile details to backend
+                const profileRes = await fetch(`${API_BASE}/agents/profile`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        bio: bio,
+                        years_exp: parseInt(yearsExp) || 0,
+                        districts: districtsArray
+                    })
+                });
+                
+                if (!profileRes.ok) {
+                    const err = await profileRes.json();
+                    console.error("Backend profile update failed:", err);
+                }
+            } catch (e) {
+                console.error("Sync to backend failed:", e);
+            }
+        }
+
+        // 3. Update in local storage agents
         let localAgents = JSON.parse(localStorage.getItem('gz_agents') || '[]');
         const idx = localAgents.findIndex(a => String(a.phone) === String(userPhone));
         if (idx !== -1) {
@@ -2854,7 +2927,7 @@
                 bio: bio,
                 years_exp: parseInt(yearsExp) || 0,
                 districts: districtsArray,
-                image: editedAgentPhotoBase64 || localAgents[idx].image
+                image: finalAvatarUrl || localAgents[idx].image
             };
         } else {
             const isAgent = (window.cachedAgents || []).find(a => String(a.phone) === String(userPhone)) || {};
@@ -2866,7 +2939,7 @@
                 bio: bio,
                 years_exp: parseInt(yearsExp) || 0,
                 districts: districtsArray,
-                image: editedAgentPhotoBase64 || isAgent.image || isAgent.avatar_url || DEFAULT_AVATAR,
+                image: finalAvatarUrl || isAgent.image || isAgent.avatar_url || DEFAULT_AVATAR,
                 listings_count: isAgent.listings_count || 0,
                 total_sales: isAgent.total_sales || 0,
                 rating: isAgent.rating || '5.0',
@@ -2875,7 +2948,7 @@
         }
         localStorage.setItem('gz_agents', JSON.stringify(localAgents));
 
-        // 2. Update window.cachedAgents
+        // 4. Update window.cachedAgents
         if (!window.cachedAgents) window.cachedAgents = [];
         const cIdx = window.cachedAgents.findIndex(a => String(a.phone) === String(userPhone));
         if (cIdx !== -1) {
@@ -2886,14 +2959,14 @@
                 bio: bio,
                 years_exp: parseInt(yearsExp) || 0,
                 districts: districtsArray,
-                image: editedAgentPhotoBase64 || window.cachedAgents[cIdx].image || window.cachedAgents[cIdx].avatar_url,
-                avatar_url: editedAgentPhotoBase64 || window.cachedAgents[cIdx].avatar_url || window.cachedAgents[cIdx].image
+                image: finalAvatarUrl || window.cachedAgents[cIdx].image || window.cachedAgents[cIdx].avatar_url,
+                avatar_url: finalAvatarUrl || window.cachedAgents[cIdx].avatar_url || window.cachedAgents[cIdx].image
             };
         } else {
             window.cachedAgents.push(localAgents[localAgents.length - 1]);
         }
 
-        // 3. Update agent name in local listings to match new name
+        // 5. Update agent name in local listings to match new name
         let listings = JSON.parse(localStorage.getItem('gz_local_listings') || '[]');
         let updatedListings = false;
         listings.forEach(p => {
@@ -2907,6 +2980,8 @@
             fetchListings('grid');
             fetchListings('map');
         }
+
+        localStorage.setItem('gz_name', name);
 
         showToast('Мэдээлэл амжилттай хадгалагдлаа!');
         renderMyProfile();
