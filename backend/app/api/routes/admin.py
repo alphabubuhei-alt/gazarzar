@@ -179,3 +179,24 @@ def set_user_role(
 
     db.commit()
     return {"message": "Хэрэглэгчийн эрх өөрчлөгдлөө", "role": user.role.value}
+
+
+@router.delete("/agents/{agent_id}")
+def delete_agent(
+    agent_id: int,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_current_admin_user)
+):
+    """Агентыг устгах: AgentProfile-г DB-с устгаж, хэрэглэгчийн эрхийг 'user' болгоно"""
+    from fastapi import HTTPException
+    from app.models.models import UserRole
+    profile = db.query(AgentProfile).filter(AgentProfile.id == agent_id).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Агент олдсонгүй")
+    user = profile.user
+    # Reset role to regular user
+    if user:
+        user.role = UserRole.user
+    db.delete(profile)
+    db.commit()
+    return {"message": "Агент амжилттай устгагдлаа"}

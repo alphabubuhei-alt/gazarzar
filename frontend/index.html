@@ -3440,14 +3440,37 @@
         }
     };
 
-    window.deleteAgent = function(id) {
-        if (!confirm('Энэ агентыг устгах уу?')) return;
+    window.deleteAgent = async function(id) {
+        if (!confirm('Энэ агентыг устгах уу?\nАгентын мэдээлэл, эрх бүгд устгагдана.')) return;
+        const token = localStorage.getItem('gz_token');
+
+        // If numeric id (from backend), call API first
+        if (token && id && !String(id).startsWith('16') /* not a Date.now() timestamp */) {
+            try {
+                const res = await fetch(`${API_BASE}/admin/agents/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.status === 401) { window.handleUnauthorized(); return; }
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    showToast('Алдаа: ' + (err.detail || 'Устгаж чадсангүй'), true);
+                    return;
+                }
+            } catch (e) {
+                showToast('Сүлжээний алдаа: ' + e.message, true);
+                return;
+            }
+        }
+
+        // Clean localStorage
         let agents = JSON.parse(localStorage.getItem('gz_agents') || '[]');
-        agents = agents.filter(a => a.id != id);
+        agents = agents.filter(a => String(a.id) !== String(id));
         localStorage.setItem('gz_agents', JSON.stringify(agents));
-        if (window.cachedAgents) window.cachedAgents = window.cachedAgents.filter(a => a.id != id);
-        showToast('Агент устгагдлаа.');
-        renderAdminDashboard();
+        if (window.cachedAgents) window.cachedAgents = window.cachedAgents.filter(a => String(a.id) !== String(id));
+
+        showToast('✅ Агент устгагдлаа.');
+        await window.refreshAdminDashboard();
     };
 
     window.createNewAgent = function() {
