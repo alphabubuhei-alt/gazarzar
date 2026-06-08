@@ -1405,6 +1405,25 @@
         return s;
     }
 
+    function deduplicateAgents(agentList) {
+        const seenPhones = new Set();
+        const seenIds = new Set();
+        const uniqueList = [];
+        for (const a of agentList) {
+            const normPhone = normalizePhone(a.phone);
+            const idStr = String(a.id || '');
+            let isDup = false;
+            if (normPhone && seenPhones.has(normPhone)) isDup = true;
+            if (idStr && seenIds.has(idStr)) isDup = true;
+            if (!isDup) {
+                if (normPhone) seenPhones.add(normPhone);
+                if (idStr) seenIds.add(idStr);
+                uniqueList.push(a);
+            }
+        }
+        return uniqueList;
+    }
+
     let heroMap, postMap, markersGroup, postMarker;
     let isLoggedIn = false;
     let selectedLatLng = null;
@@ -2401,7 +2420,9 @@
         if (grid) grid.innerHTML = Array(4).fill('<div class="skeleton skeleton-card"></div>').join('');
         
         // Load localStorage-saved agents first
-        const localAgents = JSON.parse(localStorage.getItem('gz_agents') || '[]');
+        let localAgents = JSON.parse(localStorage.getItem('gz_agents') || '[]');
+        localAgents = deduplicateAgents(localAgents);
+        localStorage.setItem('gz_agents', JSON.stringify(localAgents));
 
         try {
             const response = await fetch(`${API_BASE}/agents/`);
@@ -2936,6 +2957,7 @@
 
         // 3. Update in local storage agents
         let localAgents = JSON.parse(localStorage.getItem('gz_agents') || '[]');
+        localAgents = deduplicateAgents(localAgents);
         const idx = localAgents.findIndex(a => normalizePhone(a.phone) === normalizePhone(userPhone));
         if (idx !== -1) {
             localAgents[idx] = {
@@ -3477,11 +3499,12 @@
             badge: 'new'
         };
         // Save to localStorage
-        const agents = JSON.parse(localStorage.getItem('gz_agents') || '[]');
+        let agents = JSON.parse(localStorage.getItem('gz_agents') || '[]');
         agents.unshift(newAgent);
+        agents = deduplicateAgents(agents);
         localStorage.setItem('gz_agents', JSON.stringify(agents));
         if (!window.cachedAgents) window.cachedAgents = [];
-        window.cachedAgents.unshift(newAgent);
+        window.cachedAgents = deduplicateAgents([newAgent, ...window.cachedAgents]);
         showToast(`Агент ${data.name} амжилттай нэмэгдлээ!`);
     }
 
