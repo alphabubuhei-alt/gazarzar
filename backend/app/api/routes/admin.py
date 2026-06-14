@@ -361,5 +361,3 @@ def migrate_data(
         "migrated_listings": migrated_listings
     }
 
-
-
