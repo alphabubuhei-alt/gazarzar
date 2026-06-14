@@ -1900,25 +1900,122 @@
         }
         setTimeout(() => postMap.invalidateSize(), 300);
     }
+    function parseOneCoord(str) {
+        if (!str) return NaN;
+        str = str.trim();
+        const isDms = /[°'\"dmsnsew]/i.test(str) || /\d+\s+\d+/.test(str);
+        if (!isDms) {
+            const val = parseFloat(str);
+            return isNaN(val) ? NaN : val;
+        }
+        const numRegex = /(\d+(?:\.\d+)?)/g;
+        const matches = str.match(numRegex);
+        if (!matches || matches.length === 0) return NaN;
+        
+        const deg = parseFloat(matches[0]) || 0;
+        const min = matches.length > 1 ? parseFloat(matches[1]) || 0 : 0;
+        const sec = matches.length > 2 ? parseFloat(matches[2]) || 0 : 0;
+        
+        let decimal = deg + (min / 60) + (sec / 3600);
+        if (/[sw]/i.test(str)) {
+            decimal = -decimal;
+        }
+        return decimal;
+    }
+
     window.handleCoordsManualInput = function(val) {
         if (!val) return;
-        const parts = val.split(/[\s,;/]+/);
-        if (parts.length >= 2) {
-            const lat = parseFloat(parts[0]);
-            const lng = parseFloat(parts[1]);
-            if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-                selectedLatLng = { lat, lng };
-                if (postMap) {
-                    postMap.setView([lat, lng], 15);
-                    if (postMarker) postMap.removeLayer(postMarker);
-                    postMarker = L.marker([lat, lng]).addTo(postMap);
-                }
+        
+        let lat = NaN;
+        let lng = NaN;
+        const cleanVal = val.trim();
+        
+        if (cleanVal.includes(',')) {
+            const parts = cleanVal.split(',');
+            lat = parseOneCoord(parts[0]);
+            lng = parseOneCoord(parts[1]);
+        } 
+        else if (cleanVal.includes(';')) {
+            const parts = cleanVal.split(';');
+            lat = parseOneCoord(parts[0]);
+            lng = parseOneCoord(parts[1]);
+        }
+        else if (/[nsew]/i.test(cleanVal)) {
+            const dmsRegex = /([0-9\s°'\"\.dms-]+[NSns])\s*,?\s*([0-9\s°'\"\.dms-]+[EWew])/i;
+            const match = cleanVal.match(dmsRegex);
+            if (match) {
+                lat = parseOneCoord(match[1]);
+                lng = parseOneCoord(match[2]);
+            }
+        }
+        else {
+            const parts = cleanVal.split(/\s+/);
+            if (parts.length === 2) {
+                lat = parseOneCoord(parts[0]);
+                lng = parseOneCoord(parts[1]);
+            }
+            else if (parts.length === 6) {
+                lat = parseOneCoord(parts[0] + ' ' + parts[1] + ' ' + parts[2]);
+                lng = parseOneCoord(parts[3] + ' ' + parts[4] + ' ' + parts[5]);
+            }
+        }
+        
+        if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+            selectedLatLng = { lat, lng };
+            if (postMap) {
+                postMap.setView([lat, lng], 15);
+                if (postMarker) postMap.removeLayer(postMarker);
+                postMarker = L.marker([lat, lng]).addTo(postMap);
             }
         }
     };
     window.searchPostLoc = async function() {
         const q = document.getElementById('postAddressSearch').value;
         if (!q) return;
+        
+        let lat = NaN;
+        let lng = NaN;
+        const cleanVal = q.trim();
+        if (cleanVal.includes(',')) {
+            const parts = cleanVal.split(',');
+            lat = parseOneCoord(parts[0]);
+            lng = parseOneCoord(parts[1]);
+        } else if (cleanVal.includes(';')) {
+            const parts = cleanVal.split(';');
+            lat = parseOneCoord(parts[0]);
+            lng = parseOneCoord(parts[1]);
+        } else if (/[nsew]/i.test(cleanVal)) {
+            const dmsRegex = /([0-9\s°'\"\.dms-]+[NSns])\s*,?\s*([0-9\s°'\"\.dms-]+[EWew])/i;
+            const match = cleanVal.match(dmsRegex);
+            if (match) {
+                lat = parseOneCoord(match[1]);
+                lng = parseOneCoord(match[2]);
+            }
+        } else {
+            const parts = cleanVal.split(/\s+/);
+            if (parts.length === 2) {
+                lat = parseOneCoord(parts[0]);
+                lng = parseOneCoord(parts[1]);
+            } else if (parts.length === 6) {
+                lat = parseOneCoord(parts[0] + ' ' + parts[1] + ' ' + parts[2]);
+                lng = parseOneCoord(parts[3] + ' ' + parts[4] + ' ' + parts[5]);
+            }
+        }
+        
+        if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+            selectedLatLng = { lat, lng };
+            if (postMap) {
+                postMap.setView([lat, lng], 15);
+                if (postMarker) postMap.removeLayer(postMarker);
+                postMarker = L.marker([lat, lng]).addTo(postMap);
+            }
+            const coordsInput = document.getElementById('coordsInput');
+            if (coordsInput) {
+                coordsInput.value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            }
+            return;
+        }
+
         try {
             // Also restrict the manual button search to Mongolia
             const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&countrycodes=mn&q=${encodeURIComponent(rtsTransliterateQuery(q))}`);
