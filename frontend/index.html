@@ -77,49 +77,57 @@
 
         /* ── BOTTOM NAV (Luxury Floating) ────────── */
         .floating-nav {
-            position: fixed; bottom: -6px; left: 50%;
+            position: fixed; bottom: 12px; left: 50%;
             transform: translateX(-50%);
-            width: calc(100% - 64px); max-width: 420px;
+            width: calc(100% - 32px); max-width: 420px;
             background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(20px);
-            height: 52px;
-            border-radius: 26px;
+            height: 64px;
+            border-radius: 32px;
             display: flex; justify-content: space-around; align-items: center;
-            padding: 0 20px;
-            box-shadow: 0 4px 30px rgba(0,0,0,0.1);
+            padding: 0 12px;
+            box-shadow: 0 8px 32px rgba(28,43,58,0.12);
             border: 1px solid rgba(0,0,0,0.05);
             z-index: 6000;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .floating-nav:hover { bottom: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.15); }
+        .floating-nav:hover { bottom: 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.15); }
         .nav-item {
             display: flex; flex-direction: column; align-items: center;
-            gap: 4px; cursor: pointer; color: var(--text-muted);
+            gap: 2px; cursor: pointer; color: var(--text-muted);
             flex: 1; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .nav-item.active { color: var(--primary); }
         .nav-icon {
-            width: 34px; height: 34px; border-radius: 50%;
+            width: 30px; height: 30px; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
             transition: all 0.3s;
         }
-        .nav-icon i { width: 18px; height: 18px; stroke-width: 2px; }
+        .nav-icon i { width: 16px; height: 16px; stroke-width: 2px; }
         .nav-item.active .nav-icon { background: var(--accent); color: white; }
-        .nav-item span { display: none; }
+        .nav-item span {
+            display: block;
+            font-size: 8.5px;
+            font-weight: 750;
+            margin-top: 1px;
+            white-space: nowrap;
+            letter-spacing: -0.2px;
+            color: inherit;
+        }
 
 
         /* Center Button (Post Ad) */
         .nav-item-center {
-            position: relative; top: -6px;
+            position: relative; top: -8px;
         }
         .nav-item-center .nav-icon {
-            width: 48px; height: 48px;
+            width: 44px; height: 44px;
             background: var(--primary);
             color: white; 
             box-shadow: 0 6px 15px rgba(28,43,58,0.15);
             border: 3px solid var(--bg);
         }
-        .nav-item-center .nav-icon i { width: 20px; height: 20px; stroke-width: 3px; }
+        .nav-item-center .nav-icon i { width: 18px; height: 18px; stroke-width: 3px; }
         .nav-item-center:hover .nav-icon { transform: scale(1.05); }
 
 
@@ -733,7 +741,7 @@
 <nav class="floating-nav">
     <div class="nav-item active" id="tab-home" onclick="switchTab('home')">
         <div class="nav-icon"><i data-lucide="map"></i></div>
-        <span>Хайх</span>
+        <span>Газрын зураг</span>
     </div>
     <div class="nav-item" id="tab-listings" onclick="switchTab('listings')">
         <div class="nav-icon"><i data-lucide="layout-grid"></i></div>
@@ -741,7 +749,7 @@
     </div>
     <div class="nav-item nav-item-center" onclick="showPostAd()">
         <div class="nav-icon"><i data-lucide="plus"></i></div>
-        <span style="opacity:1; transform:none; margin-top:5px;">Зар</span>
+        <span style="margin-top: 1px;">Зар оруулах</span>
     </div>
     <div class="nav-item" id="tab-agents" onclick="switchTab('agents')">
         <div class="nav-icon"><i data-lucide="users"></i></div>
