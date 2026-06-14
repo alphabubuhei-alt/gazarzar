@@ -378,6 +378,15 @@ def diagnose_upload():
         except Exception as e:
             files = [f"Error listing files: {e}"]
             
+    # Check /data/uploads persistent disk
+    data_uploads_exists = os.path.exists("/data/uploads")
+    data_uploads_files = []
+    if data_uploads_exists:
+        try:
+            data_uploads_files = os.listdir("/data/uploads")
+        except Exception as e:
+            data_uploads_files = [f"Error: {e}"]
+            
     env_keys = list(os.environ.keys())
     return {
         "upload_dir": upload_dir,
@@ -385,6 +394,10 @@ def diagnose_upload():
         "abspath": abspath,
         "files_count": len(files),
         "files": files[:100],
+        "data_uploads": {
+            "exists": data_uploads_exists,
+            "files": data_uploads_files
+        },
         "env_keys": env_keys
     }
 
