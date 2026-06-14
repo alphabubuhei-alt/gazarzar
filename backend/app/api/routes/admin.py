@@ -387,6 +387,22 @@ def diagnose_upload():
         except Exception as e:
             data_uploads_files = [f"Error: {e}"]
             
+    # Test R2 upload
+    r2_test_status = "Not tested"
+    r2_test_error = None
+    if settings.R2_ACCOUNT_ID and settings.R2_ACCESS_KEY_ID:
+        try:
+            from app.api.routes.upload import upload_to_r2
+            test_content = b"test diagnostic file content"
+            test_key = "test_diagnose.txt"
+            test_content_type = "text/plain"
+            url = upload_to_r2(test_content, test_key, test_content_type)
+            r2_test_status = f"Success! URL: {url}"
+        except Exception as e:
+            import traceback
+            r2_test_status = "Failed"
+            r2_test_error = f"{e}\n{traceback.format_exc()}"
+            
     env_keys = list(os.environ.keys())
     return {
         "upload_dir": upload_dir,
@@ -404,6 +420,10 @@ def diagnose_upload():
             "R2_SECRET_ACCESS_KEY_set": bool(settings.R2_SECRET_ACCESS_KEY),
             "R2_BUCKET_NAME_set": bool(settings.R2_BUCKET_NAME),
             "R2_PUBLIC_URL_set": bool(settings.R2_PUBLIC_URL),
+        },
+        "r2_test": {
+            "status": r2_test_status,
+            "error": r2_test_error
         },
         "env_keys": env_keys
     }
