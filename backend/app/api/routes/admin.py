@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, timezone
@@ -207,7 +207,6 @@ def migrate_data(
     x_migration_secret: str = Header(None),
     db: Session = Depends(get_db)
 ):
-    from fastapi import HTTPException
     import httpx
     from app.models.models import UserRole, ListingImage, User, AgentProfile, Listing, ListingStatus, BoostStatus
     
