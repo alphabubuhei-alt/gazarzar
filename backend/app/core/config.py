@@ -48,8 +48,11 @@ if settings.R2_ACCOUNT_ID:
     if val in ("b495cf2611719285a7d4e635b744d13d", "b495c26111719285a7d4a635b744d13d"):
         settings.R2_ACCOUNT_ID = "b493cf2611719285a7d4e635b744d13d"
 
-# Hotfix: Correct R2 Public URL domain mismatch
+# Hotfix: Correct R2 Public URL domain mismatch (Render env var has wrong URL)
+# Wrong values seen: pub-69fd2d7f25749259ba3c622380b40c, pub-69fd2d67f25745258e2e3c622380b48c
+# Correct value from Cloudflare dashboard: pub-69fd2dd7f25745258e2e3c622308b49c
 if settings.R2_PUBLIC_URL:
-    pub_val = settings.R2_PUBLIC_URL.strip()
-    if "pub-69fd2d7f25749259ba3c622380b40c" in pub_val:
-        settings.R2_PUBLIC_URL = "https://pub-69fd2d67f25745258e2e3c622380b48c.r2.dev"
+    pub_val = settings.R2_PUBLIC_URL.strip().rstrip("/")
+    # Replace any wrong public URL with the verified correct one
+    if pub_val not in ("https://pub-69fd2dd7f25745258e2e3c622308b49c.r2.dev",):
+        settings.R2_PUBLIC_URL = "https://pub-69fd2dd7f25745258e2e3c622308b49c.r2.dev"
