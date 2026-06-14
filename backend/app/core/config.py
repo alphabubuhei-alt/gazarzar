@@ -43,5 +43,7 @@ class Settings(BaseSettings):
 settings = Settings()
 
 # Hotfix: Correct R2 Account ID typo ('b495...' -> 'b493...') configured in Render env vars
-if settings.R2_ACCOUNT_ID and settings.R2_ACCOUNT_ID.strip() == "b495cf2611719285a7d4e635b744d13d":
-    settings.R2_ACCOUNT_ID = "b493cf2611719285a7d4e635b744d13d"
+if settings.R2_ACCOUNT_ID:
+    val = settings.R2_ACCOUNT_ID.strip()
+    if val in ("b495cf2611719285a7d4e635b744d13d", "b495c26111719285a7d4a635b744d13d"):
+        settings.R2_ACCOUNT_ID = "b493cf2611719285a7d4e635b744d13d"
