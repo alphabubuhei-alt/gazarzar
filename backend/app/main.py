@@ -79,7 +79,8 @@ def health():
         "app": settings.APP_NAME, 
         "version": settings.APP_VERSION,
         "is_mount": is_mount,
-        "upload_dir": settings.UPLOAD_DIR
+        "upload_dir": settings.UPLOAD_DIR,
+        "database_type": engine.dialect.name
     }
 
 
