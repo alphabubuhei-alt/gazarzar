@@ -513,84 +513,59 @@
             transition: all 0.3s; white-space: nowrap;
             line-height: 1.1;
             color: white;
-        }
-        .z-dot {
-            width: 10px; height: 10px; border-radius: 50%;
-            border: 2px solid white; margin-top: -3px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
             position: relative;
         }
-        /* Radiating pulse ring behind dot */
-        .z-dot::after {
+        .z-bubble::after {
             content: '';
             position: absolute;
-            inset: -6px;
-            border-radius: 50%;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%) rotate(45deg);
+            width: 10px;
+            height: 10px;
             background: inherit;
-            opacity: 0.4;
-            animation: pulse-marker 2.5s infinite ease-out;
-            pointer-events: none;
-            z-index: -1;
+            border-right: 2px solid #ffffff;
+            border-bottom: 2px solid #ffffff;
+            z-index: 10;
         }
-        @keyframes pulse-marker {
-            0% { transform: scale(0.8); opacity: 0.5; }
-            100% { transform: scale(2.5); opacity: 0; }
+        .z-dot {
+            display: none; /* Hide the old dot to use the pointer tail instead */
         }
 
         .z-marker-wrapper:hover .z-bubble { transform: scale(1.1); filter: brightness(1.15); }
         
-        /* Green (Normal) */
+        /* Green (Normal) - Beautiful Emerald/Mint Gradient */
         .z-color-green .z-bubble { 
-            background: linear-gradient(135deg, #2ecc71, #27ae60); 
+            background: linear-gradient(135deg, #6BE797 0%, #2ecc71 50%, #17a04b 100%); 
+            color: #ffffff;
             box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3);
         }
-        .z-color-green .z-dot { 
-            background-color: #2ecc71; 
-            border-color: white;
-        }
         
-        /* Blue (Agent) */
+        /* Blue (Agent) - Beautiful Sapphire/Aqua Gradient */
         .z-color-blue .z-bubble { 
-            background: linear-gradient(135deg, #3498db, #2980b9); 
+            background: linear-gradient(135deg, #6BB5F5 0%, #3498db 50%, #1b6ca8 100%); 
+            color: #ffffff;
             box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
         }
-        .z-color-blue .z-dot { 
-            background-color: #3498db; 
-            border-color: white;
-        }
 
-        /* Gold (Boost) - Slightly larger, high contrast, gold pulse & breathing */
+        /* Gold (Boost) - Metallic 3D Gold Gradient + Dark Gold Text + Breathing Glow */
         .z-color-gold .z-bubble { 
-            background: linear-gradient(135deg, #f39c12, #d35400); 
+            background: linear-gradient(135deg, #FFEAB0 0%, #EAA228 50%, #B57507 100%); 
             border: 2px solid #ffffff;
             font-size: 13.5px;
-            font-weight: 850;
-            box-shadow: 0 6px 15px rgba(243, 156, 18, 0.5), 0 0 12px rgba(243, 156, 18, 0.4);
-            animation: pulse-gold-bubble 2s infinite ease-in-out;
+            font-weight: 900;
+            color: #1a1000;
+            box-shadow: 0 4px 15px rgba(234, 162, 40, 0.4), 0 0 10px rgba(255, 255, 255, 0.3);
+            animation: pulse-gold-bubble-glow 2s infinite ease-in-out;
         }
-        .z-color-gold .z-dot { 
-            background-color: #f39c12; 
-            border-color: white;
-            width: 12px; height: 12px;
-        }
-        .z-color-gold .z-dot::after {
-            inset: -8px;
-            opacity: 0.6;
-            background-color: #f39c12;
-            animation: pulse-marker-gold 2s infinite ease-out;
-        }
-        @keyframes pulse-gold-bubble {
-            0%, 100% { transform: scale(1.03); filter: brightness(1.05); }
-            50% { transform: scale(0.97); filter: brightness(0.95); }
-        }
-        @keyframes pulse-marker-gold {
-            0% { transform: scale(0.8); opacity: 0.7; }
-            100% { transform: scale(3); opacity: 0; }
+        @keyframes pulse-gold-bubble-glow {
+            0%, 100% { transform: scale(1.03); box-shadow: 0 4px 12px rgba(234,162,40,0.4), 0 0 0 0px rgba(234,162,40,0.3); }
+            50% { transform: scale(0.97); box-shadow: 0 6px 18px rgba(234,162,40,0.6), 0 0 0 6px rgba(234,162,40,0); }
         }
 
-        /* Red (Selected - Mini Map active listing) - Extra large, bold, intense pulse */
+        /* Red (Selected - Mini Map active listing) - Extra large, bold, intense pulse red gradient */
         .z-selected-marker .z-bubble { 
-            background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
+            background: linear-gradient(135deg, #FF8A8A 0%, #e74c3c 50%, #9e2a1e 100%) !important;
             font-size: 15px !important;
             font-weight: 900 !important;
             padding: 6px 14px !important;
@@ -598,25 +573,15 @@
             box-shadow: 0 8px 25px rgba(231, 76, 60, 0.6), 0 0 15px rgba(231, 76, 60, 0.5) !important;
             animation: pulse-selected-bubble 1.5s infinite ease-in-out !important;
             transform: scale(1.15);
+            color: #ffffff !important;
         }
-        .z-selected-marker .z-dot { 
-            background-color: #e74c3c !important; 
-            border-color: white !important;
-            width: 14px !important; height: 14px !important;
-        }
-        .z-selected-marker .z-dot::after {
-            inset: -10px !important;
-            background-color: #e74c3c !important;
-            opacity: 0.8 !important;
-            animation: pulse-marker-selected 1.5s infinite ease-out !important;
+        .z-selected-marker .z-bubble::after {
+            border-right: 2.5px solid #ffffff !important;
+            border-bottom: 2.5px solid #ffffff !important;
         }
         @keyframes pulse-selected-bubble {
             0%, 100% { transform: scale(1.15) translateY(-2px); }
             50% { transform: scale(1.08) translateY(1px); }
-        }
-        @keyframes pulse-marker-selected {
-            0% { transform: scale(0.8); opacity: 0.9; }
-            100% { transform: scale(3.5); opacity: 0; }
         }
 
         /* ── AGENT MOBILE & DESKTOP PROFILE LAYOUT ── */
