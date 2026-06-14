@@ -200,3 +200,165 @@ def delete_agent(
     db.delete(profile)
     db.commit()
     return {"message": "Агент амжилттай устгагдлаа"}
+
+
+@router.post("/migrate-data")
+def migrate_data(
+    x_migration_secret: str = Header(None),
+    db: Session = Depends(get_db)
+):
+    from fastapi import HTTPException
+    import httpx
+    from app.models.models import UserRole, ListingImage, User, AgentProfile, Listing, ListingStatus, BoostStatus
+    
+    if x_migration_secret != "gazarzar-super-secret-migration-key":
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    migrated_agents = 0
+    migrated_listings = 0
+    
+    with httpx.Client() as client:
+        # 1. Migrate agents
+        try:
+            r = client.get("https://gazarzar-backend.onrender.com/api/agents/")
+            if r.status_code == 200:
+                agents_list = r.json().get("items", [])
+                for a in agents_list:
+                    phone = a.get("phone")
+                    if not phone:
+                        continue
+                    
+                    # Find or create User
+                    user = db.query(User).filter(User.phone == phone).first()
+                    if not user:
+                        user = User(phone=phone, name=a.get("name"), role=UserRole.agent)
+                        db.add(user)
+                        db.flush()
+                    else:
+                        user.role = UserRole.agent
+                    
+                    # Find or create AgentProfile
+                    profile = db.query(AgentProfile).filter(AgentProfile.user_id == user.id).first()
+                    avatar = a.get("avatar_url") or a.get("image")
+                    if avatar and avatar.startswith("/uploads"):
+                        avatar = "https://gazarzar-backend.onrender.com" + avatar
+                        
+                    cover = a.get("cover_url")
+                    if cover and cover.startswith("/uploads"):
+                        cover = "https://gazarzar-backend.onrender.com" + cover
+                        
+                    districts_str = ",".join(a.get("districts", [])) if isinstance(a.get("districts"), list) else (a.get("districts") or "")
+                    
+                    if not profile:
+                        profile = AgentProfile(
+                            user_id=user.id,
+                            bio=a.get("bio", ""),
+                            avatar_url=avatar,
+                            cover_url=cover,
+                            years_exp=a.get("years_exp", 0),
+                            districts=districts_str,
+                            badge=a.get("badge", "new"),
+                            total_sales=a.get("total_sales", 0),
+                            rating=a.get("rating", 0.0),
+                            review_count=a.get("review_count", 0)
+                        )
+                        db.add(profile)
+                        migrated_agents += 1
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            print("Agent migration error:", e)
+            
+        # 2. Migrate listings
+        try:
+            r = client.get("https://gazarzar-backend.onrender.com/api/listings/?limit=100")
+            if r.status_code == 200:
+                listings_list = r.json().get("items", [])
+                for l in listings_list:
+                    owner_phone = l.get("owner_phone")
+                    if not owner_phone:
+                        continue
+                    
+                    # Check if listing already exists in new DB
+                    existing = db.query(Listing).filter(
+                        Listing.title == l.get("title"),
+                        Listing.price == l.get("price"),
+                        Listing.lat == l.get("lat"),
+                        Listing.lng == l.get("lng")
+                    ).first()
+                    if existing:
+                        continue
+                        
+                    # Find or create User
+                    owner = db.query(User).filter(User.phone == owner_phone).first()
+                    if not owner:
+                        owner = User(phone=owner_phone, name=l.get("owner_name"), role=UserRole.agent if l.get("owner_role") == "agent" else UserRole.user)
+                        db.add(owner)
+                        db.flush()
+                        
+                    # Get full description from detail page
+                    description = ""
+                    images_urls = []
+                    try:
+                        detail_r = client.get(f"https://gazarzar-backend.onrender.com/api/listings/{l.get('id')}")
+                        if detail_r.status_code == 200:
+                            detail_data = detail_r.json()
+                            description = detail_data.get("description", "")
+                            images_urls = detail_data.get("images", [])
+                    except Exception:
+                        pass
+                        
+                    primary_image = l.get("primary_image")
+                    if primary_image and primary_image.startswith("/uploads"):
+                        primary_image = "https://gazarzar-backend.onrender.com" + primary_image
+                        
+                    # Create Listing
+                    new_l = Listing(
+                        owner_id=owner.id,
+                        title=l.get("title", "Зар"),
+                        description=description,
+                        listing_type=l.get("listing_type", "sale"),
+                        status=ListingStatus.active,
+                        district=l.get("district"),
+                        khoroo=l.get("khoroo"),
+                        address=l.get("address"),
+                        lat=l.get("lat"),
+                        lng=l.get("lng"),
+                        rooms=l.get("rooms"),
+                        bathrooms=l.get("bathrooms"),
+                        area=l.get("area"),
+                        floor=l.get("floor"),
+                        total_floors=l.get("total_floors"),
+                        price=l.get("price"),
+                        category=l.get("category"),
+                        boost_status=BoostStatus.active if l.get("boost_status") == "active" else BoostStatus.none,
+                        is_new_building=l.get("is_new_building", False),
+                        view_count=l.get("view_count", 0)
+                    )
+                    db.add(new_l)
+                    db.flush()
+                    
+                    # Create ListingImages
+                    for idx, img_url in enumerate(images_urls):
+                        if img_url.startswith("/uploads"):
+                            img_url = "https://gazarzar-backend.onrender.com" + img_url
+                        is_primary = (img_url == primary_image) or (idx == 0 and not primary_image)
+                        db.add(ListingImage(
+                            listing_id=new_l.id,
+                            url=img_url,
+                            is_primary=is_primary,
+                            order=idx
+                        ))
+                    
+                    migrated_listings += 1
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            print("Listing migration error:", e)
+            
+    return {
+        "status": "success",
+        "migrated_agents": migrated_agents,
+        "migrated_listings": migrated_listings
+    }
+
