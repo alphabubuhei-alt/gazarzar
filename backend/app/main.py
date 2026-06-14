@@ -35,7 +35,8 @@ app = FastAPI(
 # ── CORS ─────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # For production, you may want to restrict this to your domain
+    allow_origins=[],
+    allow_origin_regex=r"https://(.*\.)?gazarzar\.mn|http://localhost(:\d+)?|http://127\.0\.0\.1(:\d+)?|https://(.*\.)?pages\.dev",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
