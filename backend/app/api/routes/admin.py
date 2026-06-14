@@ -390,7 +390,31 @@ def diagnose_upload():
     # Test R2 upload
     r2_test_status = "Not tested"
     r2_test_error = None
+    verify_true_test = "Not tested"
+    verify_false_test = "Not tested"
+    
     if settings.R2_ACCOUNT_ID and settings.R2_ACCESS_KEY_ID:
+        import httpx
+        r2_host = f"https://{settings.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/"
+        
+        # Test verify=True connection
+        try:
+            with httpx.Client(verify=True, timeout=10) as client:
+                r = client.get(r2_host)
+                verify_true_test = f"Success! Status: {r.status_code}"
+        except Exception as e:
+            import traceback
+            verify_true_test = f"Failed: {e}\n{traceback.format_exc()}"
+            
+        # Test verify=False connection
+        try:
+            with httpx.Client(verify=False, timeout=10) as client:
+                r = client.get(r2_host)
+                verify_false_test = f"Success! Status: {r.status_code}"
+        except Exception as e:
+            import traceback
+            verify_false_test = f"Failed: {e}\n{traceback.format_exc()}"
+            
         try:
             from app.api.routes.upload import upload_to_r2
             test_content = b"test diagnostic file content"
@@ -424,6 +448,10 @@ def diagnose_upload():
         "r2_test": {
             "status": r2_test_status,
             "error": r2_test_error
+        },
+        "ssl_tests": {
+            "verify_true": verify_true_test,
+            "verify_false": verify_false_test
         },
         "env_keys": env_keys
     }
