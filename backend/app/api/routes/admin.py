@@ -446,6 +446,7 @@ def diagnose_upload():
             "R2_PUBLIC_URL_set": bool(settings.R2_PUBLIC_URL),
         },
         "r2_details": {
+            "account_id": settings.R2_ACCOUNT_ID,
             "account_id_len": len(settings.R2_ACCOUNT_ID) if settings.R2_ACCOUNT_ID else 0,
             "account_id_start": settings.R2_ACCOUNT_ID[:4] if settings.R2_ACCOUNT_ID else "",
             "account_id_end": settings.R2_ACCOUNT_ID[-4:] if settings.R2_ACCOUNT_ID else "",
