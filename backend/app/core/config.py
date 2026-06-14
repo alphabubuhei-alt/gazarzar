@@ -47,3 +47,9 @@ if settings.R2_ACCOUNT_ID:
     val = settings.R2_ACCOUNT_ID.strip()
     if val in ("b495cf2611719285a7d4e635b744d13d", "b495c26111719285a7d4a635b744d13d"):
         settings.R2_ACCOUNT_ID = "b493cf2611719285a7d4e635b744d13d"
+
+# Hotfix: Correct R2 Public URL domain mismatch
+if settings.R2_PUBLIC_URL:
+    pub_val = settings.R2_PUBLIC_URL.strip()
+    if "pub-69fd2d7f25749259ba3c622380b40c" in pub_val:
+        settings.R2_PUBLIC_URL = "https://pub-69fd2d67f25745258e2e3c622380b48c.r2.dev"
