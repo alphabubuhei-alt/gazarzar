@@ -361,3 +361,30 @@ def migrate_data(
         "migrated_listings": migrated_listings
     }
 
+
+@router.get("/diagnose-upload")
+def diagnose_upload():
+    import os
+    from app.core.config import settings
+    upload_dir = settings.UPLOAD_DIR
+    exists = os.path.exists(upload_dir)
+    abspath = os.path.abspath(upload_dir) if exists else None
+    files = []
+    if exists:
+        try:
+            for root, dirs, filenames in os.walk(upload_dir):
+                for f in filenames:
+                    files.append(os.path.relpath(os.path.join(root, f), upload_dir))
+        except Exception as e:
+            files = [f"Error listing files: {e}"]
+            
+    env_keys = list(os.environ.keys())
+    return {
+        "upload_dir": upload_dir,
+        "exists": exists,
+        "abspath": abspath,
+        "files_count": len(files),
+        "files": files[:100],
+        "env_keys": env_keys
+    }
+
