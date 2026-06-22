@@ -1769,26 +1769,26 @@
                     <div style="font-size:12px; color:var(--text-muted);">${p.role === 'agent' ? 'Мэргэжлийн Агент' : 'Хувь хүн'}</div>
                 </div>
             </div>
-            <div style="margin-top:20px; display:flex; gap:10px; align-items:stretch;">
-                <a href="tel:${p.phone || ''}" style="flex:1; padding:12px; background:white; border-radius:12px; border:1px solid #eee; display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit;">
+            <div style="margin-top:20px; display:flex; flex-direction:column; gap:10px;">
+                <a href="tel:${p.phone || ''}" style="padding:12px; background:white; border-radius:12px; border:1px solid #eee; display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit; justify-content:center; transition:background 0.2s;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background='white'">
                     <div style="width:32px; height:32px; border-radius:50%; background:var(--accent); color:white; display:flex; align-items:center; justify-content:center; font-size:14px;">📞</div>
-                    <div class="card-phone-val" style="font-weight:800; font-size:15px; color:var(--primary);">${p.phone || '99XX-XXXX'}</div>
+                    <div class="card-phone-val" style="font-weight:800; font-size:16px; color:var(--primary);">${p.phone || '99XX-XXXX'}</div>
                 </a>
-                <button onclick="window.shareListing(event, ${p.id}, '${p.title.replace(/'/g, "\\'")}')" style="width:50px; background:white; border:1px solid #eee; border-radius:12px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--primary); font-size:16px; position:relative; transition:all 0.2s;" title="Хуваалцах">
-                    <span style="font-size:18px;">🔗</span>
+                <button onclick="window.shareListing(event, ${p.id}, '${p.title.replace(/'/g, "\\'")}')" style="padding:12px; background:white; border:1px solid #eee; border-radius:12px; display:flex; align-items:center; justify-content:center; gap:10px; cursor:pointer; color:var(--primary); font-size:15px; font-weight:700; transition:all 0.2s;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background='white'" title="Хуваалцах">
+                    <span style="font-size:18px;">🔗</span> Хуваалцах (Share)
                 </button>
             </div>
             <!-- Share Dropdown Menu -->
-            <div id="shareMenuDropdown" style="display:none; position:absolute; bottom:80px; right:24px; background:white; border-radius:12px; border:1px solid #eee; box-shadow:var(--shadow-lg); z-index:1005; overflow:hidden; width:220px;">
-                <div style="padding:10px 14px; font-size:11px; font-weight:700; color:var(--text-muted); border-bottom:1px solid #f5f5f5; text-transform:uppercase; letter-spacing:0.5px;">Зарыг хуваалцах</div>
+            <div id="shareMenuDropdown" style="display:none; position:absolute; bottom:64px; left:24px; right:24px; background:white; border-radius:12px; border:1px solid #eee; box-shadow:var(--shadow-lg); z-index:1005; overflow:hidden;">
+                <div style="padding:10px 14px; font-size:11px; font-weight:700; color:var(--text-muted); border-bottom:1px solid #f5f5f5; text-transform:uppercase; letter-spacing:0.5px; text-align:center;">Зарыг хуваалцах</div>
                 <a href="#" id="shareFB" target="_blank" style="padding:12px 14px; display:flex; align-items:center; gap:10px; color:inherit; text-decoration:none; font-size:14px; font-weight:500; transition:background 0.2s;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background='white'">
-                    <span style="color:#1877F2; font-size:16px; font-weight:bold;">f</span> Facebook-т хуваалцах
+                    <span style="color:#1877F2; font-size:16px; font-weight:bold; width:16px; text-align:center;">f</span> Facebook-т хуваалцах
                 </a>
                 <a href="#" id="shareMessenger" target="_blank" style="padding:12px 14px; display:flex; align-items:center; gap:10px; color:inherit; text-decoration:none; font-size:14px; font-weight:500; transition:background 0.2s;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background='white'">
-                    <span style="color:#0084FF; font-size:16px;">💬</span> Messenger-ээр илгээх
+                    <span style="font-size:16px; width:16px; text-align:center;">💬</span> Messenger-ээр илгээх
                 </a>
                 <button onclick="window.copyListingLink(event)" style="width:100%; border:none; background:white; text-align:left; padding:12px 14px; display:flex; align-items:center; gap:10px; color:inherit; font-size:14px; font-weight:500; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background='white'">
-                    <span style="font-size:16px;">📋</span> Холбоос хуулах
+                    <span style="font-size:16px; width:16px; text-align:center;">📋</span> Холбоос хуулах
                 </button>
             </div>
         `;
