@@ -1019,7 +1019,7 @@
                     <div id="modalDesc" style="margin-top:24px; color:#555; line-height:1.6; font-size:14px; border-top:1px solid #eee; padding-top:24px;"></div>
                 </div>
                 <div class="modal-content-right">
-                    <div id="agentCard" style="background:var(--bg); padding:24px; border-radius:var(--radius-md); margin-bottom:24px;"></div>
+                    <div id="agentCard" style="background:var(--bg); padding:24px; border-radius:var(--radius-md); margin-bottom:24px; position:relative;"></div>
                     
                     <!-- Mini Map -->
                     <div style="margin-bottom:20px;">
@@ -1646,8 +1646,54 @@
     }
 
     window.openDetail = async function(id) {
-        const p = allProperties.find(x => x.id == id);
+        let p = allProperties.find(x => x.id == id);
+        if (!p) {
+            try {
+                const res = await fetch(`${API_BASE}/listings/${id}`);
+                if (res.ok) {
+                    const l = await res.json();
+                    let primaryImg = l.primary_image || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1200&q=80';
+                    if (primaryImg.startsWith('/uploads')) {
+                        primaryImg = API_BASE.replace('/api', '') + primaryImg;
+                    }
+                    let ownerAvatar = l.owner_avatar || DEFAULT_AVATAR;
+                    if (ownerAvatar.startsWith('/uploads')) {
+                        ownerAvatar = API_BASE.replace('/api', '') + ownerAvatar;
+                    }
+                    const priceVal = l.price || 0;
+                    p = {
+                        ...l,
+                        priceVal: priceVal,
+                        priceLabel: priceVal >= 1_000_000_000 ? (priceVal/1_000_000_000).toFixed(1) + ' тэрбум ₮' : priceVal >= 1_000_000 ? (priceVal/1_000_000).toFixed(0) + ' сая ₮' : priceVal.toLocaleString() + ' ₮',
+                        lat: l.lat || 47.915,
+                        lng: l.lng || 106.915,
+                        type: l.listing_type === 'sale' ? 'Зарна' : 'Түрээслүүлнэ',
+                        rooms: l.rooms || null,
+                        area: l.area || 0,
+                        title: l.title || 'Зар',
+                        addr: l.address || l.district || 'Улаанбаатар',
+                        img: primaryImg,
+                        desc: l.description || 'Дэлгэрэнгүй мэдээлэл байхгүй.',
+                        agent: l.owner_name || 'Нэргүй',
+                        avatar: ownerAvatar,
+                        phone: l.owner_phone || '',
+                        boost: l.boost_status === 'active',
+                        role: l.owner_role || 'user',
+                        category: l.category || 'apartment',
+                        agent_profile_id: l.owner_agent_profile_id || null
+                    };
+                    allProperties.push(p);
+                }
+            } catch (err) {
+                console.warn("Failed to fetch listing:", err);
+            }
+        }
         if(!p) return;
+
+        // Update URL query parameters for deep linking
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('id', id);
+        window.history.replaceState({}, '', newUrl);
 
         document.getElementById('detailModal').style.display = 'flex';
         
@@ -1723,10 +1769,28 @@
                     <div style="font-size:12px; color:var(--text-muted);">${p.role === 'agent' ? 'Мэргэжлийн Агент' : 'Хувь хүн'}</div>
                 </div>
             </div>
-            <a href="tel:${p.phone || ''}" style="margin-top:20px; padding:12px; background:white; border-radius:12px; border:1px solid #eee; display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit;">
-                <div style="width:32px; height:32px; border-radius:50%; background:var(--accent); color:white; display:flex; align-items:center; justify-content:center; font-size:14px;">📞</div>
-                <div class="card-phone-val" style="font-weight:800; font-size:15px; color:var(--primary);">${p.phone || '99XX-XXXX'}</div>
-            </a>
+            <div style="margin-top:20px; display:flex; gap:10px; align-items:stretch;">
+                <a href="tel:${p.phone || ''}" style="flex:1; padding:12px; background:white; border-radius:12px; border:1px solid #eee; display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit;">
+                    <div style="width:32px; height:32px; border-radius:50%; background:var(--accent); color:white; display:flex; align-items:center; justify-content:center; font-size:14px;">📞</div>
+                    <div class="card-phone-val" style="font-weight:800; font-size:15px; color:var(--primary);">${p.phone || '99XX-XXXX'}</div>
+                </a>
+                <button onclick="window.shareListing(event, ${p.id}, '${p.title.replace(/'/g, "\\'")}')" style="width:50px; background:white; border:1px solid #eee; border-radius:12px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--primary); font-size:16px; position:relative; transition:all 0.2s;" title="Хуваалцах">
+                    <span style="font-size:18px;">🔗</span>
+                </button>
+            </div>
+            <!-- Share Dropdown Menu -->
+            <div id="shareMenuDropdown" style="display:none; position:absolute; bottom:80px; right:24px; background:white; border-radius:12px; border:1px solid #eee; box-shadow:var(--shadow-lg); z-index:1005; overflow:hidden; width:220px;">
+                <div style="padding:10px 14px; font-size:11px; font-weight:700; color:var(--text-muted); border-bottom:1px solid #f5f5f5; text-transform:uppercase; letter-spacing:0.5px;">Зарыг хуваалцах</div>
+                <a href="#" id="shareFB" target="_blank" style="padding:12px 14px; display:flex; align-items:center; gap:10px; color:inherit; text-decoration:none; font-size:14px; font-weight:500; transition:background 0.2s;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background='white'">
+                    <span style="color:#1877F2; font-size:16px; font-weight:bold;">f</span> Facebook-т хуваалцах
+                </a>
+                <a href="#" id="shareMessenger" target="_blank" style="padding:12px 14px; display:flex; align-items:center; gap:10px; color:inherit; text-decoration:none; font-size:14px; font-weight:500; transition:background 0.2s;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background='white'">
+                    <span style="color:#0084FF; font-size:16px;">💬</span> Messenger-ээр илгээх
+                </a>
+                <button onclick="window.copyListingLink(event)" style="width:100%; border:none; background:white; text-align:left; padding:12px 14px; display:flex; align-items:center; gap:10px; color:inherit; font-size:14px; font-weight:500; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='#f9f9f9'" onmouseout="this.style.background='white'">
+                    <span style="font-size:16px;">📋</span> Холбоос хуулах
+                </button>
+            </div>
         `;
         if (window.lucide) lucide.createIcons();
 
@@ -1844,7 +1908,73 @@
         document.getElementById('detailModal').style.display = 'none';
         if (detailAutoScrollInterval) { cancelAnimationFrame(detailAutoScrollInterval); detailAutoScrollInterval = null; }
         if (detailMiniMapInstance) { detailMiniMapInstance.remove(); detailMiniMapInstance = null; }
+        
+        // Remove 'id' parameter from browser URL when modal is closed
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('id');
+        window.history.replaceState({}, '', newUrl);
     };
+
+    // Helper functions for sharing listings
+    window.shareListing = async function(event, id, title) {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        const shareUrl = `https://gazarzar-backend.onrender.com/api/listings/${id}/share`;
+        window.currentShareUrl = shareUrl;
+        window.currentActiveListingId = id;
+        
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: title,
+                    text: `GazarZar.mn - ${title}`,
+                    url: shareUrl
+                });
+            } catch (err) {
+                console.log("Web Share cancelled or failed:", err);
+            }
+        } else {
+            const dropdown = document.getElementById('shareMenuDropdown');
+            if (dropdown) {
+                const isShown = dropdown.style.display === 'block';
+                dropdown.style.display = isShown ? 'none' : 'block';
+                
+                const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+                const messengerUrl = `https://www.facebook.com/dialog/send?app_id=184484190795&link=${encodeURIComponent(shareUrl)}&redirect_uri=${encodeURIComponent('https://gazarzar.mn/')}`;
+                
+                document.getElementById('shareFB').href = fbUrl;
+                document.getElementById('shareMessenger').href = messengerUrl;
+            }
+        }
+    };
+
+    window.copyListingLink = function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        const url = window.currentShareUrl || `https://gazarzar-backend.onrender.com/api/listings/${window.currentActiveListingId}/share`;
+        
+        navigator.clipboard.writeText(url).then(() => {
+            showToast("Холбоос амжилттай хуулагдлаа!");
+            const dropdown = document.getElementById('shareMenuDropdown');
+            if (dropdown) dropdown.style.display = 'none';
+        }).catch(err => {
+            console.error("Failed to copy link:", err);
+            showToast("Холбоос хуулж чадсангүй", true);
+        });
+    };
+
+    // Close share dropdown on clicking outside
+    document.addEventListener('click', function(e) {
+        const dropdown = document.getElementById('shareMenuDropdown');
+        if (dropdown && dropdown.style.display === 'block') {
+            const shareBtn = e.target.closest('button');
+            if (!shareBtn || !shareBtn.title || !shareBtn.title.includes('Хуваалцах')) {
+                dropdown.style.display = 'none';
+            }
+        }
+    });
 
     // ── POST AD WIZARD LOGIC ──────────────────
     window.showPostAd = function() {
@@ -3725,6 +3855,15 @@
         fetchAgents();
         checkAuth();
         setTimeout(() => lucide.createIcons(), 500);
+
+        // Deep linking check for ?id=XX
+        const urlParams = new URLSearchParams(window.location.search);
+        const listingId = urlParams.get('id');
+        if (listingId) {
+            setTimeout(() => {
+                window.openDetail(listingId);
+            }, 300);
+        }
 
         const postPrice = document.getElementById('postPrice');
         if (postPrice) {

@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
@@ -326,3 +327,73 @@ def delete_listing(
     db.delete(listing)
     db.commit()
     return {"message": "Зар амжилттай устгагдлаа"}
+
+
+@router.get("/{listing_id}/share", response_class=HTMLResponse)
+def share_listing(
+    listing_id: int,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        return RedirectResponse(url="https://gazarzar.mn/")
+        
+    user_agent = request.headers.get("user-agent", "").lower()
+    is_crawler = any(c in user_agent for c in [
+        "facebookexternalhit", "facebot", "twitterbot", "telegrambot", 
+        "slackbot", "discordbot", "whatsapp", "googlebot"
+    ])
+    
+    if is_crawler:
+        primary_image = next((img.url for img in listing.images if img.is_primary), None)
+        if not primary_image and listing.images:
+            primary_image = listing.images[0].url
+            
+        if primary_image and primary_image.startswith("/uploads"):
+            from app.core.config import settings
+            if settings.R2_PUBLIC_URL:
+                primary_image = settings.R2_PUBLIC_URL.rstrip("/") + primary_image
+            else:
+                primary_image = str(request.base_url).rstrip("/") + primary_image
+                
+        desc = listing.description or ""
+        if len(desc) > 200:
+            desc = desc[:197] + "..."
+            
+        price_val = listing.price or 0
+        price_str = ""
+        if price_val >= 1_000_000_000:
+            price_str = f" - {price_val/1_000_000_000:.1f} тэрбум ₮"
+        elif price_val >= 1_000_000:
+            price_str = f" - {price_val/1_000_000:.0f} сая ₮"
+        elif price_val > 0:
+            price_str = f" - {price_val:,.0f} ₮"
+            
+        title = f"{listing.title}{price_str}"
+        
+        html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{title}</title>
+    <meta name="description" content="{desc}">
+    <meta property="og:title" content="{title}">
+    <meta property="og:description" content="{desc}">
+    <meta property="og:image" content="{primary_image}">
+    <meta property="og:url" content="https://gazarzar.mn/?id={listing_id}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="GazarZar.mn">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{title}">
+    <meta name="twitter:description" content="{desc}">
+    <meta name="twitter:image" content="{primary_image}">
+</head>
+<body>
+    <p>Redirecting to GazarZar...</p>
+</body>
+</html>"""
+        return HTMLResponse(content=html_content)
+    else:
+        return RedirectResponse(url=f"https://gazarzar.mn/?id={listing_id}")
+
