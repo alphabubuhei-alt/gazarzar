@@ -1417,7 +1417,13 @@
     let gridFilters = { q: '', minPrice: '', maxPrice: '', type: 'all', rooms: 'all', area: 'all' };
 
     window.initMap = function() {
-        heroMap = L.map('heroMap', { zoomControl: true, attributionControl: false }).setView([47.915, 106.915], 11);
+        const isMobile = window.innerWidth < 768;
+        const defaultZoom = isMobile ? 9.8 : 10.8;
+        heroMap = L.map('heroMap', { 
+            zoomControl: true, 
+            attributionControl: false,
+            zoomSnap: 0.1
+        }).setView([47.915, 106.915], defaultZoom);
         L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 22 }).addTo(heroMap);
         markersGroup = L.layerGroup().addTo(heroMap);
         fetchListings('map');
